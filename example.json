@@ -1,0 +1,826 @@
+{
+  "version": 2,
+  "name": "Acondicionamiento físico y pérdida de grasa",
+  "student": "María Fernández",
+  "studentProfile": {
+    "age": "32",
+    "sex": "Femenino",
+    "weight": "72",
+    "height": "165",
+    "bodyFat": "30",
+    "injuries": "No presenta",
+    "medicalNotes": "Sin antecedentes médicos relevantes",
+    "caseDescription": "Paciente adulta actualmente sedentaria que necesita una progresión gradual.",
+    "goal": "Bajar de peso y mejorar la condición física general"
+  },
+  "startDate": "2026-07-13",
+  "generalNotes": "Realizar movilidad antes de cada sesión. Aumentar la carga solo cuando se complete el trabajo con buena técnica.",
+  "sessions": [
+    {
+      "id": 1,
+      "name": "Fuerza global y core",
+      "exercises": [
+        {
+          "id": 1,
+          "name": "Sentadilla goblet",
+          "description": "Descender de forma controlada manteniendo las rodillas alineadas.",
+          "type": "strength",
+          "order": 1,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "12",
+              "load": "8 kg",
+              "rest": "60",
+              "notes": "Descender de forma controlada y mantener las rodillas alineadas."
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "12",
+              "load": "10 kg",
+              "rest": "60"
+            },
+            {
+              "week": 3,
+              "sets": "4",
+              "reps": "10",
+              "load": "10 kg",
+              "rest": "75"
+            },
+            {
+              "week": 4,
+              "sets": "4",
+              "reps": "10",
+              "load": "12 kg",
+              "rest": "75",
+              "notes": "Aumentar la carga solo si se conserva la técnica."
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "8",
+              "load": "14 kg",
+              "rest": "90"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "8",
+              "load": "16 kg",
+              "rest": "90"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "name": "Peso muerto rumano con mancuernas",
+          "type": "strength",
+          "order": 2,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "12",
+              "load": "6 kg",
+              "rest": "60"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "12",
+              "load": "7 kg",
+              "rest": "60"
+            },
+            {
+              "week": 3,
+              "sets": "4",
+              "reps": "10",
+              "load": "8 kg",
+              "rest": "75"
+            },
+            {
+              "week": 4,
+              "sets": "4",
+              "reps": "10",
+              "load": "9 kg",
+              "rest": "75"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "8",
+              "load": "10 kg",
+              "rest": "90"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "8",
+              "load": "12 kg",
+              "rest": "90"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "name": "Puente de glúteos con mancuerna",
+          "type": "strength",
+          "order": 3,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "15",
+              "load": "10 kg",
+              "rest": "60"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "15",
+              "load": "12 kg",
+              "rest": "60"
+            },
+            {
+              "week": 3,
+              "sets": "4",
+              "reps": "12",
+              "load": "14 kg",
+              "rest": "60"
+            },
+            {
+              "week": 4,
+              "sets": "4",
+              "reps": "12",
+              "load": "16 kg",
+              "rest": "60"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "10",
+              "load": "18 kg",
+              "rest": "75"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "10",
+              "load": "20 kg",
+              "rest": "75"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "name": "Zancada hacia atrás",
+          "type": "strength",
+          "order": 4,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "10 por lado",
+              "rest": "60"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "12 por lado",
+              "rest": "60"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "10 por lado",
+              "load": "3 kg",
+              "rest": "60"
+            },
+            {
+              "week": 4,
+              "sets": "3",
+              "reps": "12 por lado",
+              "load": "3 kg",
+              "rest": "60"
+            },
+            {
+              "week": 5,
+              "sets": "3",
+              "reps": "10 por lado",
+              "load": "4 kg",
+              "rest": "60"
+            },
+            {
+              "week": 6,
+              "sets": "3",
+              "reps": "12 por lado",
+              "load": "4 kg",
+              "rest": "60"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "name": "Remo con mancuerna a una mano",
+          "type": "strength",
+          "order": 5,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "12 por lado",
+              "load": "6 kg",
+              "rest": "60"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "12 por lado",
+              "load": "7 kg",
+              "rest": "60"
+            },
+            {
+              "week": 3,
+              "sets": "4",
+              "reps": "10 por lado",
+              "load": "8 kg",
+              "rest": "75"
+            },
+            {
+              "week": 4,
+              "sets": "4",
+              "reps": "10 por lado",
+              "load": "9 kg",
+              "rest": "75"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "8 por lado",
+              "load": "10 kg",
+              "rest": "90"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "8 por lado",
+              "load": "12 kg",
+              "rest": "90"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "name": "Press de pecho con mancuernas",
+          "type": "strength",
+          "order": 6,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "12",
+              "load": "5 kg",
+              "rest": "60"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "12",
+              "load": "5 kg",
+              "rest": "60"
+            },
+            {
+              "week": 3,
+              "sets": "4",
+              "reps": "10",
+              "load": "6 kg",
+              "rest": "75"
+            },
+            {
+              "week": 4,
+              "sets": "4",
+              "reps": "10",
+              "load": "7 kg",
+              "rest": "75"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "8",
+              "load": "8 kg",
+              "rest": "90"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "8",
+              "load": "9 kg",
+              "rest": "90"
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "name": "Press de hombros con mancuernas",
+          "type": "strength",
+          "order": 7,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "10",
+              "load": "4 kg",
+              "rest": "60"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "12",
+              "load": "4 kg",
+              "rest": "60"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "10",
+              "load": "5 kg",
+              "rest": "60"
+            },
+            {
+              "week": 4,
+              "sets": "3",
+              "reps": "12",
+              "load": "5 kg",
+              "rest": "60"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "10",
+              "load": "6 kg",
+              "rest": "75"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "10",
+              "load": "7 kg",
+              "rest": "75"
+            }
+          ]
+        },
+        {
+          "id": 8,
+          "name": "Elevación de talones de pie",
+          "type": "strength",
+          "order": 8,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "15",
+              "rest": "45"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "18",
+              "rest": "45"
+            },
+            {
+              "week": 3,
+              "sets": "4",
+              "reps": "15",
+              "load": "6 kg",
+              "rest": "45"
+            },
+            {
+              "week": 4,
+              "sets": "4",
+              "reps": "18",
+              "load": "8 kg",
+              "rest": "45"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "20",
+              "load": "10 kg",
+              "rest": "45"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "20",
+              "load": "12 kg",
+              "rest": "45"
+            }
+          ]
+        },
+        {
+          "id": 9,
+          "name": "Plancha frontal",
+          "type": "strength",
+          "order": 9,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "25 segundos",
+              "rest": "45"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "30 segundos",
+              "rest": "45"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "35 segundos",
+              "rest": "45"
+            },
+            {
+              "week": 4,
+              "sets": "3",
+              "reps": "40 segundos",
+              "rest": "45"
+            },
+            {
+              "week": 5,
+              "sets": "3",
+              "reps": "45 segundos",
+              "rest": "45"
+            },
+            {
+              "week": 6,
+              "sets": "3",
+              "reps": "50 segundos",
+              "rest": "45"
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "name": "Plancha lateral",
+          "type": "strength",
+          "order": 10,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "2",
+              "reps": "20 segundos por lado",
+              "rest": "45"
+            },
+            {
+              "week": 2,
+              "sets": "2",
+              "reps": "25 segundos por lado",
+              "rest": "45"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "25 segundos por lado",
+              "rest": "45"
+            },
+            {
+              "week": 4,
+              "sets": "3",
+              "reps": "30 segundos por lado",
+              "rest": "45"
+            },
+            {
+              "week": 5,
+              "sets": "3",
+              "reps": "30 segundos por lado",
+              "rest": "45"
+            },
+            {
+              "week": 6,
+              "sets": "3",
+              "reps": "35 segundos por lado",
+              "rest": "45"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Cardio y movilidad",
+      "exercises": [
+        {
+          "id": 11,
+          "name": "Caminata rápida o bicicleta estática",
+          "description": "Mantener un ritmo que permita hablar con frases cortas.",
+          "type": "cardio",
+          "order": 1,
+          "plan": [
+            {
+              "week": 1,
+              "metric": "25 minutos",
+              "intensity": "Moderada"
+            },
+            {
+              "week": 2,
+              "metric": "30 minutos",
+              "intensity": "Moderada"
+            },
+            {
+              "week": 3,
+              "metric": "35 minutos",
+              "intensity": "Intervalos suaves"
+            },
+            {
+              "week": 4,
+              "metric": "35 minutos",
+              "intensity": "Intervalos moderados"
+            },
+            {
+              "week": 5,
+              "metric": "40 minutos",
+              "intensity": "Intervalos moderados"
+            },
+            {
+              "week": 6,
+              "metric": "45 minutos",
+              "intensity": "Intervalos moderados"
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "name": "Movilidad de cadera y hombros",
+          "type": "mobility",
+          "order": 2,
+          "plan": [
+            {
+              "week": 1,
+              "metric": "10 minutos",
+              "intensity": "Suave"
+            },
+            {
+              "week": 2,
+              "metric": "12 minutos",
+              "intensity": "Suave"
+            },
+            {
+              "week": 3,
+              "metric": "15 minutos",
+              "intensity": "Suave"
+            },
+            {
+              "week": 4,
+              "metric": "15 minutos",
+              "intensity": "Suave"
+            },
+            {
+              "week": 5,
+              "metric": "15 minutos",
+              "intensity": "Suave"
+            },
+            {
+              "week": 6,
+              "metric": "18 minutos",
+              "intensity": "Suave"
+            }
+          ]
+        },
+        {
+          "id": 13,
+          "name": "Estiramientos generales",
+          "type": "mobility",
+          "order": 3,
+          "plan": [
+            {
+              "week": 1,
+              "metric": "5 minutos",
+              "intensity": "Suave"
+            },
+            {
+              "week": 2,
+              "metric": "6 minutos",
+              "intensity": "Suave"
+            },
+            {
+              "week": 3,
+              "metric": "7 minutos",
+              "intensity": "Suave"
+            },
+            {
+              "week": 4,
+              "metric": "8 minutos",
+              "intensity": "Suave"
+            },
+            {
+              "week": 5,
+              "metric": "8 minutos",
+              "intensity": "Suave"
+            },
+            {
+              "week": 6,
+              "metric": "10 minutos",
+              "intensity": "Suave"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Fuerza complementaria y core",
+      "exercises": [
+        {
+          "id": 14,
+          "name": "Step ups en banco bajo",
+          "type": "strength",
+          "order": 1,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "12 por lado",
+              "rest": "45"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "12 por lado",
+              "rest": "45"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "15 por lado",
+              "load": "2 kg",
+              "rest": "45"
+            },
+            {
+              "week": 4,
+              "sets": "3",
+              "reps": "15 por lado",
+              "load": "3 kg",
+              "rest": "45"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "12 por lado",
+              "load": "3 kg",
+              "rest": "45"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "12 por lado",
+              "load": "4 kg",
+              "rest": "45"
+            }
+          ]
+        },
+        {
+          "id": 15,
+          "name": "Jalón con banda elástica",
+          "type": "strength",
+          "order": 2,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "15",
+              "load": "Banda ligera",
+              "rest": "45"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "15",
+              "load": "Banda media",
+              "rest": "45"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "15",
+              "load": "Banda media",
+              "rest": "45"
+            },
+            {
+              "week": 4,
+              "sets": "4",
+              "reps": "12",
+              "load": "Banda media",
+              "rest": "45"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "12",
+              "load": "Banda fuerte",
+              "rest": "45"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "15",
+              "load": "Banda fuerte",
+              "rest": "45"
+            }
+          ]
+        },
+        {
+          "id": 16,
+          "name": "Dead bug",
+          "type": "strength",
+          "order": 3,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "10 por lado",
+              "rest": "45"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "12 por lado",
+              "rest": "45"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "12 por lado",
+              "rest": "45"
+            },
+            {
+              "week": 4,
+              "sets": "3",
+              "reps": "15 por lado",
+              "rest": "45"
+            },
+            {
+              "week": 5,
+              "sets": "3",
+              "reps": "15 por lado",
+              "rest": "45"
+            },
+            {
+              "week": 6,
+              "sets": "3",
+              "reps": "15 por lado",
+              "rest": "45"
+            }
+          ]
+        },
+        {
+          "id": 17,
+          "name": "Crunch abdominal",
+          "type": "strength",
+          "order": 4,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "15",
+              "rest": "45"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "18",
+              "rest": "45"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "20",
+              "rest": "45"
+            },
+            {
+              "week": 4,
+              "sets": "3",
+              "reps": "20",
+              "rest": "45"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "15",
+              "rest": "45"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "18",
+              "rest": "45"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
