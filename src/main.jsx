@@ -2,6 +2,16 @@ import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { jsPDF } from "jspdf";
 import {
+  publishPlan,
+  updatePrescription,
+  getStudentPlan,
+  getPrescriberPlan,
+  saveExecution,
+  resetExecution,
+  resetPrescriberExecution,
+  saveSessionDate as saveSessionDateApi,
+} from "./api";
+import {
   Activity,
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -186,8 +196,199 @@ const toSchemaPlan = (value) => {
   };
 };
 
-function App() {
-  const [plan, setPlan] = useState(initialPlan);
+const sharedExerciseDetails = (exercise) =>
+  exercise.type === "strength"
+    ? [
+        `${exercise.sets || "-"} x ${exercise.reps || "-"}`,
+        exercise.load && `Carga: ${exercise.load}`,
+      ].filter(Boolean)
+    : [exercise.metric, exercise.intensity].filter(Boolean);
+
+const formatSharedDate = (value) => {
+  if (!value) return "Sin especificar";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Sin especificar"
+    : date.toLocaleString("es-ES", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+};
+const formatChileDate = (value) => {
+  if (!value) return "Sin fecha";
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.getTime())
+    ? "Sin fecha"
+    : date.toLocaleDateString("es-CL", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+};
+
+function SummaryExerciseValues({ exercise }) {
+  return <>
+    {sharedExerciseDetails(exercise).map((detail, index) =>
+      index === 0 ? <strong key={`${detail}-${index}`}>{detail}</strong>
+        : detail.startsWith("Carga:") ? <span className="comparison-load" key={`${detail}-${index}`}><small>Carga:</small><strong className="load-value">{detail.slice(6).trim()}</strong></span>
+        : <small key={`${detail}-${index}`}>{detail}</small>,
+    )}
+  </>;
+}
+
+function SharedPlanView({ mode, token }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState("");
+  useEffect(() => {
+    (mode === "student" ? getStudentPlan(token) : getPrescriberPlan(token))
+      .then(setData)
+      .catch((err) => setError(err.message));
+  }, [mode, token]);
+
+  if (error) return <div className="shared-page"><h1>Enlace no disponible</h1><p>{error}</p></div>;
+  if (!data) return null;
+
+  if (mode === "prescriber") {
+    return <PrescriberPlanApp data={data} />;
+  }
+
+  const plan = normalizePlan(data.prescribedPlan);
+  return <StudentSummaryView plan={plan} initialExecution={data.execution || {}} initialSessionDates={data.sessionDates || {}} sharedAt={data.sharedAt} token={token} />;
+}
+
+function StudentSummaryView({ plan, initialExecution, initialSessionDates, sharedAt, token }) {
+  const [execution, setExecution] = useState(initialExecution);
+  const [sessionDates, setSessionDates] = useState(initialSessionDates);
+  const [saving, setSaving] = useState("");
+  const [editing, setEditing] = useState("");
+  const [draft, setDraft] = useState({});
+  const sessions = plan.weeks[0]?.days || [];
+  const [selectedSessionId, setSelectedSessionId] = useState("all");
+  const [selectedWeekNumber, setSelectedWeekNumber] = useState("all");
+  const [editingSessionDate, setEditingSessionDate] = useState("");
+  const [sessionDateDraft, setSessionDateDraft] = useState("");
+  const formattedStartDate = plan.startDate
+    ? new Date(`${plan.startDate}T12:00:00`).toLocaleDateString("es-ES")
+    : "Sin especificar";
+  const save = async (week, session, exercise) => {
+    const key = `${week}:${session}:${exercise}`;
+    setSaving(key);
+    try {
+      const result = await saveExecution(token, { week, session, exercise, values: draft });
+      setExecution((current) => ({ ...current, [key]: result.execution }));
+      setEditing("");
+    } finally {
+      setSaving("");
+    }
+  };
+  const saveSessionDate = async (week, session, sessionDate) => {
+    const key = `${week}:${session}`;
+    try {
+      const result = await saveSessionDateApi(token, { week, session, sessionDate });
+      setSessionDates((current) => ({ ...current, [key]: result.sessionDate }));
+      setEditingSessionDate("");
+    } catch {
+      // The regular execution error remains visible when saving an exercise.
+    }
+  };
+  const reset = async (week, session, exercise) => {
+    const key = `${week}:${session}:${exercise}`;
+    await resetExecution(token, { week, session, exercise });
+    setExecution((current) => { const next = { ...current }; delete next[key]; return next; });
+    setEditing("");
+  };
+  const startEditing = (key, exercise) => {
+    setDraft({
+      sets: execution[key]?.sets ?? exercise.sets ?? "",
+      reps: execution[key]?.reps ?? exercise.reps ?? "",
+      load: execution[key]?.load ?? exercise.load ?? "",
+      metric: execution[key]?.metric ?? exercise.metric ?? "",
+      intensity: execution[key]?.intensity ?? exercise.intensity ?? "",
+      studentComment: execution[key]?.studentComment ?? "",
+    });
+    setEditing(key);
+  };
+  return <div className="app-shell student-plan-shell">
+    <main className="main-content">
+      <header className="topbar student-topbar"><div className="brand"><div className="brand-mark"><Activity size={20} /></div><span>exe<span>planner</span></span></div><span>Registro de entrenamiento</span></header>
+      <div className="page-wrap">
+        <section className="page-heading student-page-heading"><div><h1>{plan.name || "Planificación"}</h1><p>Planificación de {plan.student || "Estudiante"}. Pulsa una celda para registrar lo que realmente hiciste.</p></div><div className="student-plan-dates"><div className="student-start-date"><span>FECHA DE INICIO</span><strong>{formattedStartDate}</strong></div></div></section>
+        <section className="student-summary-filters" aria-label="Filtros del resumen">
+          <label>SESIÓN<select value={selectedSessionId} onChange={(event) => setSelectedSessionId(event.target.value)}><option value="all">Todas las sesiones</option>{sessions.map((session, index) => <option key={session.id} value={String(session.id)}>Sesión {String(index + 1).padStart(2, "0")} · {session.name}</option>)}</select></label>
+          <label>SEMANA<select value={selectedWeekNumber} onChange={(event) => setSelectedWeekNumber(event.target.value)}><option value="all">Todas las semanas</option>{plan.weeks.map((week) => <option key={week.id} value={String(week.number)}>Semana {String(week.number).padStart(2, "0")}</option>)}</select></label>
+          {(selectedSessionId !== "all" || selectedWeekNumber !== "all") && <button className="summary-filter-reset" onClick={() => { setSelectedSessionId("all"); setSelectedWeekNumber("all"); }}>Mostrar todo</button>}
+        </section>
+      <section className={`comparison-section ${selectedWeekNumber !== "all" ? "single-week-summary" : ""}`}><div className="comparison-heading"><div><h2>Resumen por semanas</h2><p>Compara la progresión de cada ejercicio a lo largo del plan.</p></div></div>
+      {sessions.filter((session) => selectedSessionId === "all" || String(session.id) === selectedSessionId).map((session, sessionIndex) => <section className="comparison-card shared-summary-card" key={session.id}><div className="comparison-title"><span className="comparison-day-number">{String(sessions.indexOf(session) + 1).padStart(2, "0")}</span><h3>{session.name || `Sesión ${sessions.indexOf(session) + 1}`}</h3></div><div className="comparison-table-wrap"><table className="comparison-table"><thead><tr><th>Ejercicio</th>{plan.weeks.filter((week) => selectedWeekNumber === "all" || String(week.number) === selectedWeekNumber).map((week) => { const dateKey = `${week.number}:${session.id}`; const isEditingDate = editingSessionDate === dateKey; return <th key={week.id}>Semana {String(week.number).padStart(2, "0")}<div className="student-session-date">{isEditingDate ? <div className="session-date-editor"><input lang="es-CL" aria-label="Fecha de sesión" type="date" value={sessionDateDraft} onChange={(event) => setSessionDateDraft(event.target.value)} /><button type="button" onClick={() => saveSessionDate(week.number, session.id, sessionDateDraft)}>Guardar</button><button type="button" onClick={() => setEditingSessionDate("")}>Cancelar</button></div> : <button type="button" className="session-date-display" onClick={() => { setEditingSessionDate(dateKey); setSessionDateDraft(sessionDates[dateKey] || ""); }}>{formatChileDate(sessionDates[dateKey])}</button>}</div></th>; })}</tr></thead><tbody>{session.exercises.map((baseExercise) => <tr key={baseExercise.id}><th><span>{baseExercise.name}</span>{baseExercise.description && <small className="comparison-exercise-description">{baseExercise.description}</small>}</th>{plan.weeks.filter((week) => selectedWeekNumber === "all" || String(week.number) === selectedWeekNumber).map((week) => {
+        const exercise = week.days?.[sessionIndex]?.exercises?.find((item) => item.id === baseExercise.id) || baseExercise;
+        const key = `${week.number}:${session.id}:${exercise.id}`;
+        const actual = execution[key];
+        const displayedExercise = actual ? { ...exercise, ...actual } : exercise;
+        const isEditing = editing === key;
+        return <td
+          key={week.id}
+          className="student-summary-cell"
+        >
+          {!isEditing ? <>
+            <button className="comparison-exercise-link" onClick={() => startEditing(key, exercise)} title={`Registrar ${exercise.name} en la semana ${week.number}`}>
+              {actual ? <>
+                <div className="student-value-comparison">
+                <div className="student-original-value">
+                  <span className="student-value-label">Prescrito</span>
+                  <SummaryExerciseValues exercise={exercise} />
+                </div>
+                <div className="student-actual-value">
+                  <span className="student-value-label">Realizado</span>
+                  <SummaryExerciseValues exercise={displayedExercise} />
+                  {actual.studentComment && <small className="student-comment"><FileText size={9} /> {actual.studentComment}</small>}
+                  {actual.completed && <small className="student-completed-label">Completado</small>}
+                </div>
+                </div>
+              <div className="student-notes-row">
+                {exercise.rest && <small className="student-fixed-detail">Descanso: {exercise.rest} s</small>}
+                {exercise.notes && <small className="comparison-exercise-note"><FileText size={9} /> {exercise.notes}</small>}
+              </div>
+              </> : <>
+              <SummaryExerciseValues exercise={exercise} />
+              {exercise.rest && <small className="student-fixed-detail">Descanso: {exercise.rest} s</small>}
+              {exercise.notes && <small className="comparison-exercise-note"><FileText size={9} /> {exercise.notes}</small>}
+            </>}
+            </button>
+          </> : <div className="student-summary-editor">
+            {exercise.type === "strength" ? <>
+              <input value={draft.sets} placeholder="Series" onChange={(e) => setDraft((value) => ({ ...value, sets: e.target.value }))} />
+              <input value={draft.reps} placeholder="Repeticiones" onChange={(e) => setDraft((value) => ({ ...value, reps: e.target.value }))} />
+              <input value={draft.load} placeholder="Carga" onChange={(e) => setDraft((value) => ({ ...value, load: e.target.value }))} />
+            </> : <>
+              <input value={draft.metric} placeholder={exercise.type === "cardio" ? "Tiempo / distancia" : "Duración / volumen"} onChange={(e) => setDraft((value) => ({ ...value, metric: e.target.value }))} />
+              <input value={draft.intensity} placeholder="Intensidad" onChange={(e) => setDraft((value) => ({ ...value, intensity: e.target.value }))} />
+            </>}
+            <textarea value={draft.studentComment} placeholder="Comentario del estudiante" onChange={(e) => setDraft((value) => ({ ...value, studentComment: e.target.value }))} />
+            <div className="student-editor-actions"><button className="summary-save" disabled={saving === key} onClick={() => save(week.number, session.id, exercise.id)}>{saving === key ? "Guardando..." : "Guardar"}</button><button className="summary-cancel" onClick={() => setEditing("")}>Cancelar</button><button className="summary-reset" onClick={() => reset(week.number, session.id, exercise.id)}>Volver a prescrita</button></div>
+          </div>}
+        </td>;
+      })}</tr>)}</tbody></table></div></section>)}
+      </section>
+      </div>
+    </main>
+  </div>;
+}
+
+function PrescriberPlanApp({ data }) {
+  const [plan] = useState(() => normalizePlan(data.prescribedPlan));
+  const prescriberToken = window.location.pathname.split("/").filter(Boolean).at(-1);
+  const studentToken = new URLSearchParams(window.location.search).get("student");
+  const studentUrl = studentToken
+    ? `${window.location.origin}/student/${encodeURIComponent(studentToken)}`
+    : "";
+  return <App initialPlan={plan} serverPlan={data.prescribedPlan} initialExecution={data.execution || {}} sharedEditor studentUrl={studentUrl} sharedAt={data.sharedAt} prescriberToken={prescriberToken} planId={data.id} />;
+}
+
+function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecution = {}, sharedEditor = false, studentUrl = "", sharedAt = "", prescriberToken = "", planId = "" }) {
+  const sharedMatch = window.location.pathname.match(/^\/(student|prescriber)\/([^/]+)/);
+  if (sharedMatch && !sharedEditor) return <SharedPlanView mode={sharedMatch[1]} token={decodeURIComponent(sharedMatch[2])} />;
+  const [plan, setPlan] = useState(providedPlan || initialPlan);
   const [weekIndex, setWeekIndex] = useState(0);
   const [activeDay, setActiveDay] = useState(0);
   const [activeExercise, setActiveExercise] = useState(0);
@@ -195,7 +396,14 @@ function App() {
   const [highlightedSummaryCell, setHighlightedSummaryCell] = useState(null);
   const [tab, setTab] = useState("plan");
   const [copyStatus, setCopyStatus] = useState("");
+  const [shareState, setShareState] = useState({ loading: false, links: null, error: "" });
+  const [shareCredentials, setShareCredentials] = useState(null);
+  const [savedServerPlan, setSavedServerPlan] = useState(serverPlan);
+  const [studentExecution, setStudentExecution] = useState(initialExecution);
   const importRef = useRef(null);
+  const hasUnsavedPrescriptionChanges = sharedEditor && savedServerPlan
+    ? JSON.stringify(toSchemaPlan(plan)) !== JSON.stringify(savedServerPlan)
+    : false;
   const week = plan.weeks[weekIndex];
   const day = week?.days[activeDay];
   const selectedExercise = day?.exercises[activeExercise];
@@ -496,6 +704,74 @@ function App() {
     a.download = `${plan.name.toLowerCase().replace(/\s+/g, "-") || "planificacion"}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
+  };
+  const sharePlan = async () => {
+    setShareState({ loading: true, links: null, error: "" });
+    try {
+      let result;
+      if (sharedEditor) {
+        const publishedPlan = toSchemaPlan(plan);
+        await updatePrescription(planId, prescriberToken, publishedPlan);
+        // Editar y guardar la prescripción resuelve las sugerencias pendientes
+        // del estudiante para que no reaparezcan después de recargar.
+        await Promise.all(
+          Object.keys(studentExecution).map((key) => {
+            const [week, session, exercise] = key.split(":").map(Number);
+            return resetPrescriberExecution(planId, prescriberToken, {
+              week,
+              session,
+              exercise,
+            });
+          }),
+        );
+        setStudentExecution({});
+        setSavedServerPlan(publishedPlan);
+        result = { id: planId, prescriberToken, studentToken: new URLSearchParams(window.location.search).get("student") };
+      } else if (shareCredentials) {
+        await updatePrescription(shareCredentials.id, shareCredentials.prescriberToken, toSchemaPlan(plan));
+        result = shareCredentials;
+      } else {
+        result = await publishPlan(toSchemaPlan(plan));
+      }
+      setShareCredentials(result);
+      const base = window.location.origin;
+      const prescriberUrl = `${base}/prescriber/${result.prescriberToken}?student=${encodeURIComponent(result.studentToken)}`;
+      setShareState((current) => ({ ...current, loading: false, error: "" }));
+      if (!sharedEditor) {
+        // La publicación inicial lleva al prescriptor sin mostrar una vista intermedia.
+        window.location.replace(prescriberUrl);
+      }
+    } catch (error) {
+      setShareState({ loading: false, links: null, error: error.message });
+    }
+  };
+  const resolveStudentChange = async (week, session, exercise, action) => {
+    const key = `${week}:${session}:${exercise}`;
+    const actual = studentExecution[key];
+    if (action === "reset" || action === "accept") {
+      if (action === "accept" && actual) {
+        const nextPlan = {
+          ...plan,
+          weeks: plan.weeks.map((item) => item.number !== week ? item : {
+            ...item,
+            days: item.days.map((day) => day.id !== session ? day : {
+              ...day,
+              exercises: day.exercises.map((item) => item.id === exercise
+                ? item.type === "strength"
+                  ? { ...item, sets: actual.sets || item.sets, reps: actual.reps || item.reps, load: actual.load || item.load }
+                  : { ...item, metric: actual.metric || item.metric, intensity: actual.intensity || item.intensity }
+                : item),
+            }),
+          }),
+        };
+        const publishedPlan = toSchemaPlan(nextPlan);
+        await updatePrescription(planId, prescriberToken, publishedPlan);
+        setPlan(nextPlan);
+        setSavedServerPlan(publishedPlan);
+      }
+      await resetPrescriberExecution(planId, prescriberToken, { week, session, exercise });
+      setStudentExecution((current) => { const next = { ...current }; delete next[key]; return next; });
+    }
   };
   const exportPdf = () => {
     const pdf = new jsPDF({
@@ -979,6 +1255,12 @@ function App() {
         </div>
         <nav>
           <button
+            onClick={() => window.location.assign("/")}
+            className={!sharedEditor && !providedPlan ? "nav-active" : ""}
+          >
+            <Plus size={18} /> Nueva planificación
+          </button>
+          <button
             className={tab === "plan" ? "nav-active" : ""}
             onClick={() => setTab("plan")}
           >
@@ -1023,7 +1305,11 @@ function App() {
       </aside>
       <main className="main-content">
         <header className="topbar">
+          <div className="brand topbar-brand"><div className="brand-mark"><Activity size={20} /></div><span>exe<span>planner</span></span></div>
           <div className="top-actions">
+            <button className="outline-btn" onClick={() => window.location.assign("/")}>
+              <Plus size={16} /> Nueva planificación
+            </button>
             <button
               className="outline-btn"
               onClick={() => importRef.current?.click()}
@@ -1043,10 +1329,15 @@ function App() {
             <button className="dark-btn" onClick={exportPdf}>
               <FileText size={16} /> Descargar PDF
             </button>
+            {(!sharedEditor || hasUnsavedPrescriptionChanges) && (
+              <button className="dark-btn" onClick={sharePlan} disabled={shareState.loading}>
+                <Copy size={16} /> {shareState.loading ? (sharedEditor ? "Guardando..." : "Compartiendo...") : sharedEditor ? "Guardar cambios" : shareCredentials ? "Actualizar enlace" : "Compartir"}
+              </button>
+            )}
           </div>
         </header>
         <div className="page-wrap">
-          <section className="page-heading">
+          <section className={`page-heading ${sharedEditor ? "prescriber-page-heading" : ""}`}>
             <div>
               <h1>{plan.name || "Nueva planificación"}</h1>
               <p>
@@ -1054,7 +1345,54 @@ function App() {
                 estudiantes. No necesitas crear una cuenta.
               </p>
             </div>
+            {sharedEditor && (
+              <div className="student-start-date prescriber-shared-date">
+                <span>COMPARTIDA EL</span>
+                <strong>{formatSharedDate(sharedAt)}</strong>
+              </div>
+            )}
           </section>
+          {studentUrl && (
+            <section className="share-panel">
+              <strong>Enlace del estudiante</strong>
+              <span><a href={studentUrl} target="_blank" rel="noopener noreferrer">{studentUrl}</a></span>
+              <button className="outline-btn small" onClick={() => navigator.clipboard?.writeText(studentUrl)}>Copiar enlace</button>
+            </section>
+          )}
+          {sharedEditor && Object.entries(studentExecution).some(([key]) => key.split(":").length === 3 && Number(key.split(":")[2]) > 0) && (
+            <section className="student-changes-panel">
+              <div><h2>Cambios del estudiante</h2><p>Revisa cada ejecución y decide cómo aplicar el cambio.</p></div>
+              {Object.entries(studentExecution).filter(([key]) => key.split(":").length === 3 && Number(key.split(":")[2]) > 0).map(([key, actual]) => {
+                const [weekNumber, sessionId, exerciseId] = key.split(":").map(Number);
+                const exercise = plan.weeks.find((item) => item.number === weekNumber)?.days.find((item) => item.id === sessionId)?.exercises.find((item) => item.id === exerciseId);
+                if (!exercise) return null;
+                const targetWeekIndex = plan.weeks.findIndex((item) => item.number === weekNumber);
+                const targetDayIndex = plan.weeks[targetWeekIndex]?.days.findIndex((item) => item.id === sessionId) ?? 0;
+                const isStrength = exercise.type === "strength";
+                const originalPrimary = isStrength
+                  ? `${exercise.sets || "-"} x ${exercise.reps || "-"}`
+                  : exercise.metric || "Sin métrica";
+                const actualPrimary = isStrength
+                  ? `${actual.sets || "-"} x ${actual.reps || "-"}`
+                  : actual.metric || "Sin métrica";
+                const originalSecondary = isStrength
+                  ? `Carga: ${exercise.load || "Sin carga"}`
+                  : `Intensidad: ${exercise.intensity || "Sin especificar"}`;
+                const actualSecondary = isStrength
+                  ? `Carga: ${actual.load || "Sin carga"}`
+                  : `Intensidad: ${actual.intensity || "Sin especificar"}`;
+                return <div className="student-change-row" key={key}><div className="student-change-content"><strong>{exercise.name}</strong><small>Semana {weekNumber}</small><div className="student-change-values"><div className="student-change-original"><span>Original</span><strong>{originalPrimary}</strong><small>{originalSecondary}</small></div><div className="student-change-updated"><span>Estudiante</span><strong>{actualPrimary}</strong><small>{actualSecondary}</small></div></div>{actual.studentComment && <p className="student-change-comment"><strong>Comentario</strong>{actual.studentComment}</p>}</div><div className="student-change-actions"><button onClick={() => resolveStudentChange(weekNumber, sessionId, exerciseId, "accept")}>Aceptar cambio del estudiante</button><button onClick={() => resolveStudentChange(weekNumber, sessionId, exerciseId, "reset")}>Rechazar cambio del estudiante</button><button onClick={() => { setWeekIndex(targetWeekIndex); setActiveDay(targetDayIndex); setActiveExercise(plan.weeks[targetWeekIndex].days[targetDayIndex].exercises.findIndex((item) => item.id === exerciseId)); setHighlightedWeek(weekNumber); setTab("plan"); setTimeout(() => document.getElementById("plan-structure")?.scrollIntoView({ behavior: "smooth", block: "start" })); window.setTimeout(() => setHighlightedWeek(null), 1800); }}>Editar ejercicio</button></div></div>;
+              })}
+            </section>
+          )}
+          {shareState.links && (
+            <section className="share-panel">
+              <strong>Plan compartido</strong>
+              <span>Estudiante: <a href={shareState.links.student}>{shareState.links.student}</a></span>
+              <span>Prescriptor: <a href={shareState.links.prescriber}>{shareState.links.prescriber}</a></span>
+            </section>
+          )}
+          {shareState.error && <div className="error-banner">{shareState.error}</div>}
           {tab === "plan" ? (
             <>
               <section className="overview-grid">
@@ -1129,6 +1467,14 @@ function App() {
                         }
                       />
                     </label>
+                    {sharedEditor && (
+                      <label>
+                        COMPARTIDA EL
+                        <div className="calculated-field shared-date-field">
+                          {formatSharedDate(sharedAt)}
+                        </div>
+                      </label>
+                    )}
                     <label className="general-notes-field">
                       COMENTARIO GENERAL
                       <textarea
@@ -1771,6 +2117,15 @@ function App() {
                                   (item) =>
                                     item.name.trim().toLowerCase() === row.key,
                                 );
+                                const executionKey = exercise
+                                  ? `${w.number}:${currentDay.id}:${exercise.id}`
+                                  : "";
+                                const actual = executionKey
+                                  ? studentExecution[executionKey]
+                                  : null;
+                                const displayedExercise = actual
+                                  ? { ...exercise, ...actual }
+                                  : exercise;
                                 return (
                                   <td
                                     key={w.id}
@@ -1792,7 +2147,23 @@ function App() {
                                         }
                                         title={`Editar ${exercise.name} en la semana ${w.number}`}
                                       >
-                                        {exerciseDetails(exercise).map(
+                                        {actual ? (
+                                          <>
+                                            <div className="student-value-comparison prescriber-summary-comparison">
+                                              <div className="student-original-value">
+                                                <span className="student-value-label">Prescrito</span>
+                                                <SummaryExerciseValues exercise={exercise} />
+                                              </div>
+                                              <div className="student-actual-value">
+                                                <span className="student-value-label">Realizado</span>
+                                                <SummaryExerciseValues exercise={displayedExercise} />
+                                                {actual.studentComment && <small className="student-comment"><FileText size={9} /> {actual.studentComment}</small>}
+                                              </div>
+                                            </div>
+                                            {exercise.rest && <small className="student-fixed-detail">Descanso: {exercise.rest} s</small>}
+                                            {exercise.notes && <small className="comparison-exercise-note"><FileText size={9} /> {exercise.notes}</small>}
+                                          </>
+                                        ) : exerciseDetails(exercise).map(
                                           (detail, index) =>
                                             index === 0 ? (
                                               <strong key={`${detail}-${index}`}>
@@ -1811,7 +2182,7 @@ function App() {
                                               </small>
                                             ),
                                         )}
-                                        {exercise.notes && (
+                                        {!actual && exercise.notes && (
                                           <small className="comparison-exercise-note">
                                             <FileText size={9} /> {exercise.notes}
                                           </small>
