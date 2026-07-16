@@ -423,12 +423,10 @@ function App() {
       })),
     }));
   const updateExercisePrescription = (weekNumber, patch) => {
-    const { notes, ...progressionPatch } = patch;
-    const onlyNotes = notes !== undefined && !Object.keys(progressionPatch).length;
     setPlan((p) => ({
       ...p,
       weeks: p.weeks.map((item) => {
-        if (item.number < weekNumber || (onlyNotes && item.number > weekNumber))
+        if (item.number !== weekNumber)
           return item;
         return {
           ...item,
@@ -441,8 +439,7 @@ function App() {
                     exerciseIndex === activeExercise
                       ? {
                         ...exercise,
-                        ...progressionPatch,
-                        ...(notes !== undefined ? { notes } : {}),
+                        ...patch,
                       }
                       : exercise,
                 ),
@@ -1402,7 +1399,7 @@ function App() {
                               value={day.name}
                               onChange={(e) => updateSessionStructure({ name: e.target.value })}
                             />
-                            <p>El ejercicio se mantiene en todas las semanas. Edita aquí su prescripción progresiva.</p>
+                             <p>El ejercicio se mantiene en todas las semanas. Edita la prescripción de cada semana de forma independiente.</p>
                           </div>
                         </div>
                         <div className="selected-exercise-header">
