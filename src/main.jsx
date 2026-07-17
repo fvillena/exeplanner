@@ -129,7 +129,7 @@ const normalizePlan = (value) => {
     days: sessions.map((session, sessionIndex) => {
       return {
         id: session.id,
-        name: session.name || `Sesión ${sessionIndex + 1}`,
+        name: session.name || `Día ${sessionIndex + 1}`,
         exercises: session.exercises.map((definition) => ({
           ...definition,
           ...(definition.plan?.find((item) => Number(item.week) === number) || {}),
@@ -162,7 +162,7 @@ const toSchemaPlan = (value) => {
   const firstWeek = value.weeks[0];
   const sessions = (firstWeek?.days || []).map((day, dayIndex) => ({
     id: day.id,
-    name: day.name || `Sesión ${dayIndex + 1}`,
+    name: day.name || `Día ${dayIndex + 1}`,
     exercises: day.exercises.map((exercise, exerciseIndex) => ({
       id: exercise.id,
       name: exercise.name,
@@ -604,7 +604,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
     ].filter(Boolean);
   };
   const addDay = () => {
-    const newDay = makeDay(week.days.length + 1, `Sesión ${week.days.length + 1}`);
+    const newDay = makeDay(week.days.length + 1, `Día ${week.days.length + 1}`);
     setPlan((p) => ({
       ...p,
       weeks: p.weeks.map((item) => ({
@@ -1907,11 +1907,11 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
                                       placeholder={placeholder}
                                       onChange={(e) => updateExercisePrescription(targetWeek.number, { [field]: e.target.value })}
                                     />
-                                    {field !== "notes" && targetWeek.number < plan.weeks.at(-1)?.number && <button type="button" className="propagate-btn" onClick={() => propagateExerciseField(targetWeek.number, field)} title="Propagar esta columna hacia abajo">↓</button>}
+                                    {field !== "notes" && targetWeek.number < plan.weeks.at(-1)?.number && <button type="button" tabIndex={-1} className="propagate-btn" onClick={() => propagateExerciseField(targetWeek.number, field)} title="Propagar esta columna hacia abajo">↓</button>}
                                   </div>
                                 ))}
                                 {isStrength && (
-                                  <div className="prescription-input-cell"><input value={ex.rest || ""} placeholder="60" onChange={(e) => updateExercisePrescription(targetWeek.number, { rest: e.target.value })} />{targetWeek.number < plan.weeks.at(-1)?.number && <button type="button" className="propagate-btn" onClick={() => propagateExerciseField(targetWeek.number, "rest")} title="Propagar esta columna hacia abajo">↓</button>}</div>
+                                  <div className="prescription-input-cell"><input value={ex.rest || ""} placeholder="60" onChange={(e) => updateExercisePrescription(targetWeek.number, { rest: e.target.value })} />{targetWeek.number < plan.weeks.at(-1)?.number && <button type="button" tabIndex={-1} className="propagate-btn" onClick={() => propagateExerciseField(targetWeek.number, "rest")} title="Propagar esta columna hacia abajo">↓</button>}</div>
                                 )}
                                 {isStrength && (
                                   <div className="prescription-input-cell"><input value={ex.notes || ""} placeholder="Notas" onChange={(e) => updateExercisePrescription(targetWeek.number, { notes: e.target.value })} /></div>
