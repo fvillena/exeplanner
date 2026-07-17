@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { jsPDF } from "jspdf";
+import QRCode from "qrcode";
 import {
   publishPlan,
   updatePrescription,
@@ -414,6 +415,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
   const [copyStatus, setCopyStatus] = useState("");
   const [shareState, setShareState] = useState({ loading: false, links: null, error: "" });
   const [shareCredentials, setShareCredentials] = useState(null);
+  const [pdfState, setPdfState] = useState({ loading: false, error: "" });
   const [savedServerPlan, setSavedServerPlan] = useState(serverPlan);
   const [studentExecution, setStudentExecution] = useState(initialExecution);
   const importRef = useRef(null);
@@ -789,7 +791,13 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
       setStudentExecution((current) => { const next = { ...current }; delete next[key]; return next; });
     }
   };
-  const exportPdf = () => {
+  const exportPdf = async () => {
+    if (pdfState.loading) return;
+    setPdfState({ loading: true, error: "" });
+    try {
+      const qrDataUrl = studentUrl
+        ? await QRCode.toDataURL(studentUrl, { errorCorrectionLevel: "M", margin: 1, width: 320 })
+        : "";
     const pdf = new jsPDF({
       unit: "mm",
       format: "letter",
@@ -930,6 +938,25 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
       addPageIfNeeded(lines.length * 4 + 4);
       pdf.text(lines, margin, y);
       y += lines.length * 4 + 7;
+    }
+    if (studentUrl) {
+      addPageIfNeeded(48);
+      const qrSize = 34;
+      const textX = margin + qrSize + 8;
+      pdf.addImage(qrDataUrl, "PNG", margin, y, qrSize, qrSize);
+      pdf.setTextColor(...green);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
+      pdf.text("Vista de estudiante", textX, y + 8);
+      pdf.setTextColor(...muted);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.text("Escanea el código QR para abrir el plan.", textX, y + 14);
+      const urlLines = pdf.splitTextToSize(studentUrl, contentWidth - qrSize - 8);
+      pdf.setTextColor(55, 65, 59);
+      pdf.setFontSize(7.5);
+      pdf.text(urlLines, textX, y + 21, { lineHeightFactor: 1.25 });
+      y += 42;
     }
     // La planificación semanal comienza siempre en una página independiente.
     pdf.addPage();
@@ -1213,6 +1240,11 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
     pdf.save(
       `${safe(plan.name).toLowerCase().replace(/\s+/g, "-") || "planificacion"}.pdf`,
     );
+    } catch (error) {
+      setPdfState({ loading: false, error: error.message || "No se pudo generar el PDF." });
+      return;
+    }
+    setPdfState({ loading: false, error: "" });
   };
   const importPlan = (e) => {
     const file = e.target.files?.[0];
@@ -1342,7 +1374,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
             <button className="outline-btn" onClick={exportPlan}>
               <ArrowDownToLine size={16} /> Exportar
             </button>
-            <button className="dark-btn" onClick={exportPdf}>
+            <button className="dark-btn" onClick={exportPdf} disabled={pdfState.loading}>
               <FileText size={16} /> Descargar PDF
             </button>
             {(!sharedEditor || hasUnsavedPrescriptionChanges) && (
@@ -1368,6 +1400,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
               </div>
             )}
           </section>
+          {pdfState.error && <div className="error-banner">{pdfState.error}</div>}
           {studentUrl && (
             <section className="share-panel">
               <strong>Enlace del estudiante</strong>
