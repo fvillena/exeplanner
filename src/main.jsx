@@ -10,6 +10,7 @@ import {
   resetExecution,
   resetPrescriberExecution,
   saveSessionDate as saveSessionDateApi,
+  getPlanAccess,
 } from "./api";
 import {
   Activity,
@@ -257,6 +258,19 @@ function SharedPlanView({ mode, token }) {
   return <StudentSummaryView plan={plan} initialExecution={data.execution || {}} initialSessionDates={data.sessionDates || {}} sharedAt={data.sharedAt} token={token} />;
 }
 
+function PlanAccessView({ token }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    getPlanAccess(token).then(setData).catch((err) => setError(err.message));
+  }, [token]);
+  if (error) return <div className="shared-page"><h1>Enlace no disponible</h1><p>{error}</p></div>;
+  if (!data) return null;
+  if (data.role === "prescriber") return <PrescriberPlanApp data={data} />;
+  const plan = normalizePlan(data.prescribedPlan);
+  return <StudentSummaryView plan={plan} initialExecution={data.execution || {}} initialSessionDates={data.sessionDates || {}} sharedAt={data.sharedAt} token={token} />;
+}
+
 function StudentSummaryView({ plan, initialExecution, initialSessionDates, sharedAt, token }) {
   const [execution, setExecution] = useState(initialExecution);
   const [sessionDates, setSessionDates] = useState(initialSessionDates);
@@ -378,14 +392,16 @@ function StudentSummaryView({ plan, initialExecution, initialSessionDates, share
 function PrescriberPlanApp({ data }) {
   const [plan] = useState(() => normalizePlan(data.prescribedPlan));
   const prescriberToken = window.location.pathname.split("/").filter(Boolean).at(-1);
-  const studentToken = new URLSearchParams(window.location.search).get("student");
+  const studentToken = data.studentToken;
   const studentUrl = studentToken
-    ? `${window.location.origin}/student/${encodeURIComponent(studentToken)}`
+    ? `${window.location.origin}/p/${encodeURIComponent(studentToken)}`
     : "";
   return <App initialPlan={plan} serverPlan={data.prescribedPlan} initialExecution={data.execution || {}} sharedEditor studentUrl={studentUrl} sharedAt={data.sharedAt} prescriberToken={prescriberToken} planId={data.id} />;
 }
 
 function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecution = {}, sharedEditor = false, studentUrl = "", sharedAt = "", prescriberToken = "", planId = "" }) {
+  const planMatch = window.location.pathname.match(/^\/p\/([^/]+)/);
+  if (planMatch && !sharedEditor) return <PlanAccessView token={decodeURIComponent(planMatch[1])} />;
   const sharedMatch = window.location.pathname.match(/^\/(student|prescriber)\/([^/]+)/);
   if (sharedMatch && !sharedEditor) return <SharedPlanView mode={sharedMatch[1]} token={decodeURIComponent(sharedMatch[2])} />;
   const [plan, setPlan] = useState(providedPlan || initialPlan);
@@ -735,7 +751,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
       }
       setShareCredentials(result);
       const base = window.location.origin;
-      const prescriberUrl = `${base}/prescriber/${result.prescriberToken}?student=${encodeURIComponent(result.studentToken)}`;
+       const prescriberUrl = `${base}/p/${encodeURIComponent(result.prescriberToken)}`;
       setShareState((current) => ({ ...current, loading: false, error: "" }));
       if (!sharedEditor) {
         // La publicación inicial lleva al prescriptor sin mostrar una vista intermedia.

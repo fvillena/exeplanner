@@ -16,6 +16,7 @@ export const publishPlan = (plan) => request("/api/plans", { method: "POST", bod
 export const updatePrescription = (id, token, plan) => request(`/api/plans/${id}/prescription`, { method: "PUT", headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(plan) });
 export const getStudentPlan = (token) => request(`/api/student/plans/${encodeURIComponent(token)}`);
 export const getPrescriberPlan = (token) => request(`/api/prescriber/plans/${encodeURIComponent(token)}`);
+export const getPlanAccess = (token) => request(`/api/plans/access/${encodeURIComponent(token)}`);
 export const saveExecution = (token, payload) => request(`/api/student/plans/${encodeURIComponent(token)}/execution`, { method: "PATCH", body: JSON.stringify(payload) });
 export const saveSessionDate = (token, payload) => request(`/api/student/plans/${encodeURIComponent(token)}/session-date`, { method: "PATCH", body: JSON.stringify(payload) });
 export const resetExecution = (token, payload) => request(`/api/student/plans/${encodeURIComponent(token)}/execution/reset`, { method: "POST", body: JSON.stringify(payload) });

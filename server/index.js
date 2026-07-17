@@ -17,7 +17,7 @@ app.use(cors({ origin: process.env.CORS_ORIGIN?.split(",") || true }));
 app.use(express.json({ limit: "2mb" }));
 app.use(rateLimit({ windowMs: 60_000, limit: 120 }));
 
-const token = () => crypto.randomBytes(32).toString("base64url");
+const token = () => crypto.randomBytes(9).toString("base64url").slice(0, 12);
 const hash = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const cleanPlan = (plan) => {
   // The API receives the public schema, but accept the editor's normalized
@@ -60,13 +60,29 @@ const cleanPlan = (plan) => {
 };
 const executionKey = (week, session, exercise) => `${week}:${session}:${exercise}`;
 const findByToken = async (field, value) => plans.findOne({ [field]: hash(value) });
-const publicDocument = (doc) => ({
+const findPlanAccess = async (value) => {
+  const tokenHash = hash(value);
+  const doc = await plans.findOne({ $or: [{ studentTokenHash: tokenHash }, { prescriberTokenHash: tokenHash }] });
+  if (!doc) return null;
+  return {
+    doc,
+    role: doc.prescriberTokenHash === tokenHash ? "prescriber" : "student",
+  };
+};
+const publicDocument = (doc, includeStudentToken = false) => ({
   id: String(doc._id),
   prescribedPlan: doc.prescribedPlan,
   execution: doc.execution || {},
   sessionDates: doc.sessionDates || {},
   sharedAt: doc.sharedAt || doc.createdAt,
   updatedAt: doc.updatedAt,
+  ...(includeStudentToken && doc.studentToken ? { studentToken: doc.studentToken } : {}),
+});
+
+app.get("/api/plans/access/:token", async (req, res) => {
+  const access = await findPlanAccess(req.params.token);
+  if (!access) return res.status(404).json({ error: "Enlace no válido" });
+  res.json({ ...publicDocument(access.doc, access.role === "prescriber"), role: access.role });
 });
 
 app.get("/api/health", (_, res) => res.json({ ok: true, database: Boolean(plans) }));
@@ -78,6 +94,7 @@ app.post("/api/plans", async (req, res) => {
     const prescriberToken = token();
     const now = new Date();
     const result = await plans.insertOne({
+      studentToken,
       studentTokenHash: hash(studentToken), prescriberTokenHash: hash(prescriberToken),
       prescribedPlan, execution: {}, sessionDates: {}, sharedAt: now, createdAt: now, updatedAt: now,
     });
@@ -87,7 +104,7 @@ app.post("/api/plans", async (req, res) => {
 app.get("/api/student/plans/:token", async (req, res) => {
   const doc = await findByToken("studentTokenHash", req.params.token);
   if (!doc) return res.status(404).json({ error: "Enlace no válido" });
-  res.json(publicDocument(doc));
+  res.json(publicDocument(doc, true));
 });
 app.get("/api/prescriber/plans/:token", async (req, res) => {
   const doc = await findByToken("prescriberTokenHash", req.params.token);
