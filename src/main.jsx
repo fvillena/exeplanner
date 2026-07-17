@@ -311,7 +311,7 @@ function StudentSummaryView({ plan, initialExecution, initialSessionDates, share
   };
   return <div className="app-shell student-plan-shell">
     <main className="main-content">
-      <header className="topbar student-topbar"><div className="brand"><div className="brand-mark"><Activity size={20} /></div><span>exe<span>planner</span></span></div><span>Registro de entrenamiento</span></header>
+      <header className="topbar student-topbar"><a className="brand" href="/"><div className="brand-mark"><Activity size={20} /></div><span>exe<span>planner</span></span></a><span>Registro de entrenamiento</span></header>
       <div className="page-wrap">
         <section className="page-heading student-page-heading"><div><h1>{plan.name || "Planificación"}</h1><p>Planificación de {plan.student || "Estudiante"}. Pulsa una celda para registrar lo que realmente hiciste.</p></div><div className="student-plan-dates"><div className="student-start-date"><span>FECHA DE INICIO</span><strong>{formattedStartDate}</strong></div></div></section>
         <section className="student-summary-filters" aria-label="Filtros del resumen">
@@ -1233,14 +1233,14 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand">
+         <a className="brand" href="/">
           <div className="brand-mark">
             <Activity size={20} />
           </div>
           <span>
             exe<span>planner</span>
           </span>
-        </div>
+         </a>
         <div className="workspace-label">
           PLANIFICADOR LOCAL <ChevronDown size={13} />
         </div>
@@ -1305,7 +1305,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
       </aside>
       <main className="main-content">
         <header className="topbar">
-          <div className="brand topbar-brand"><div className="brand-mark"><Activity size={20} /></div><span>exe<span>planner</span></span></div>
+           <a className="brand topbar-brand" href="/"><div className="brand-mark"><Activity size={20} /></div><span>exe<span>planner</span></span></a>
           <div className="top-actions">
             <button className="outline-btn" onClick={() => window.location.assign("/")}>
               <Plus size={16} /> Nueva planificación
