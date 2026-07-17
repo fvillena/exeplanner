@@ -829,6 +829,57 @@ nav button:hover,
     text-decoration-color: #e0b7bf
 }
 
+.prescription-week-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 7px
+}
+
+.prescription-input-cell {
+    position: relative;
+    min-width: 0
+}
+
+.prescription-input-cell input {
+    min-width: 0;
+    padding-right: 34px
+}
+
+.propagate-btn {
+    position: absolute;
+    top: 50%;
+    right: 5px;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    width: 24px;
+    height: 24px;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid #d8e2dc;
+    border-radius: 6px;
+    background: #f7faf8;
+    color: #52645a;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: border-color .15s ease, background .15s ease, color .15s ease
+}
+
+.propagate-btn:hover {
+    border-color: #bd6573;
+    background: #fff5f6;
+    color: #9f2f3f
+}
+
+.propagate-btn span {
+    color: #9f2f3f;
+    font-size: 13px;
+    line-height: 9px
+}
+
 .summary-cell-highlight {
     position: relative;
     z-index: 1;
