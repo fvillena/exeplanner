@@ -1554,14 +1554,6 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
                         }
                       />
                     </label>
-                    {sharedEditor && (
-                      <label>
-                        COMPARTIDA EL
-                        <div className="calculated-field shared-date-field">
-                          {formatSharedDate(sharedAt)}
-                        </div>
-                      </label>
-                    )}
                     <label className="general-notes-field">
                       COMENTARIO GENERAL
                       <textarea
