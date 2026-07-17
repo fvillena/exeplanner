@@ -1,4 +1,5 @@
-const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3001").replace(/\/$/, "");
+// Use the Nginx same-origin proxy for every deployment.
+const API_URL = "";
 const request = async (path, options = {}) => {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,

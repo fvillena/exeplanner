@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  // Permite publicar la aplicación en cualquier subcarpeta, por ejemplo /planner/.
-  base: './',
+  // Use root-relative assets so client-side routes such as /prescriber load correctly.
+  base: '/',
   plugins: [react()]
 });
