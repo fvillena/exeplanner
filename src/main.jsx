@@ -311,7 +311,7 @@ function StudentSummaryView({ plan, initialExecution, initialSessionDates, share
   };
   return <div className="app-shell student-plan-shell">
     <main className="main-content">
-      <header className="topbar student-topbar"><a className="brand" href="/"><div className="brand-mark"><Activity size={20} /></div><span>exe<span>planner</span></span></a><span>Registro de entrenamiento</span></header>
+      <header className="topbar student-topbar"><div className="brand"><div className="brand-mark"><Activity size={20} /></div><span>exe<span>planner</span></span></div><span>Registro de entrenamiento</span></header>
       <div className="page-wrap">
         <section className="page-heading student-page-heading"><div><h1>{plan.name || "Planificación"}</h1><p>Planificación de {plan.student || "Estudiante"}. Pulsa una celda para registrar lo que realmente hiciste.</p></div><div className="student-plan-dates"><div className="student-start-date"><span>FECHA DE INICIO</span><strong>{formattedStartDate}</strong></div></div></section>
         <section className="student-summary-filters" aria-label="Filtros del resumen">
