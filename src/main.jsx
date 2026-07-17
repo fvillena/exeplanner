@@ -422,6 +422,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
   const hasUnsavedPrescriptionChanges = sharedEditor && savedServerPlan
     ? JSON.stringify(toSchemaPlan(plan)) !== JSON.stringify(savedServerPlan)
     : false;
+  const hasSavedPlan = sharedEditor ? !hasUnsavedPrescriptionChanges : Boolean(shareCredentials);
   const week = plan.weeks[weekIndex];
   const day = week?.days[activeDay];
   const selectedExercise = day?.exercises[activeExercise];
@@ -792,6 +793,10 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
     }
   };
   const exportPdf = async () => {
+    if (!hasSavedPlan) {
+      setPdfState({ loading: false, error: "Guarda la planificación antes de descargar el PDF." });
+      return;
+    }
     if (pdfState.loading) return;
     setPdfState({ loading: true, error: "" });
     try {
@@ -1374,12 +1379,14 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
             <button className="outline-btn" onClick={exportPlan}>
               <ArrowDownToLine size={16} /> Exportar
             </button>
-            <button className="dark-btn" onClick={exportPdf} disabled={pdfState.loading}>
-              <FileText size={16} /> Descargar PDF
-            </button>
+            {hasSavedPlan && (
+              <button className="dark-btn" onClick={exportPdf} disabled={pdfState.loading}>
+                <FileText size={16} /> Descargar PDF
+              </button>
+            )}
             {(!sharedEditor || hasUnsavedPrescriptionChanges) && (
               <button className="dark-btn" onClick={sharePlan} disabled={shareState.loading}>
-                <Copy size={16} /> {shareState.loading ? (sharedEditor ? "Guardando..." : "Compartiendo...") : sharedEditor ? "Guardar cambios" : shareCredentials ? "Actualizar enlace" : "Compartir"}
+                <Copy size={16} /> {shareState.loading ? "Guardando..." : "Guardar"}
               </button>
             )}
           </div>
