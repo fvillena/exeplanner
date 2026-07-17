@@ -11,7 +11,6 @@ import {
   resetExecution,
   resetPrescriberExecution,
   saveSessionDate as saveSessionDateApi,
-  getPlanAccess,
 } from "./api";
 import {
   Activity,
@@ -263,13 +262,11 @@ function PlanAccessView({ token }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   useEffect(() => {
-    getPlanAccess(token).then(setData).catch((err) => setError(err.message));
+    getPrescriberPlan(token).then(setData).catch((err) => setError(err.message));
   }, [token]);
   if (error) return <div className="shared-page"><h1>Enlace no disponible</h1><p>{error}</p></div>;
   if (!data) return null;
-  if (data.role === "prescriber") return <PrescriberPlanApp data={data} />;
-  const plan = normalizePlan(data.prescribedPlan);
-  return <StudentSummaryView plan={plan} initialExecution={data.execution || {}} initialSessionDates={data.sessionDates || {}} sharedAt={data.sharedAt} token={token} />;
+  return <PrescriberPlanApp data={data} />;
 }
 
 function StudentSummaryView({ plan, initialExecution, initialSessionDates, sharedAt, token }) {
@@ -395,16 +392,17 @@ function PrescriberPlanApp({ data }) {
   const prescriberToken = window.location.pathname.split("/").filter(Boolean).at(-1);
   const studentToken = data.studentToken;
   const studentUrl = studentToken
-    ? `${window.location.origin}/p/${encodeURIComponent(studentToken)}`
+    ? `${window.location.origin}/s/${encodeURIComponent(studentToken)}`
     : "";
-  return <App initialPlan={plan} serverPlan={data.prescribedPlan} initialExecution={data.execution || {}} sharedEditor studentUrl={studentUrl} sharedAt={data.sharedAt} prescriberToken={prescriberToken} planId={data.id} />;
+  const prescriberUrl = `${window.location.origin}/p/${encodeURIComponent(prescriberToken)}`;
+  return <App initialPlan={plan} serverPlan={data.prescribedPlan} initialExecution={data.execution || {}} sharedEditor studentUrl={studentUrl} prescriberUrl={prescriberUrl} sharedAt={data.sharedAt} prescriberToken={prescriberToken} planId={data.id} />;
 }
 
-function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecution = {}, sharedEditor = false, studentUrl = "", sharedAt = "", prescriberToken = "", planId = "" }) {
+function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecution = {}, sharedEditor = false, studentUrl = "", prescriberUrl = "", sharedAt = "", prescriberToken = "", planId = "" }) {
   const planMatch = window.location.pathname.match(/^\/p\/([^/]+)/);
   if (planMatch && !sharedEditor) return <PlanAccessView token={decodeURIComponent(planMatch[1])} />;
-  const sharedMatch = window.location.pathname.match(/^\/(student|prescriber)\/([^/]+)/);
-  if (sharedMatch && !sharedEditor) return <SharedPlanView mode={sharedMatch[1]} token={decodeURIComponent(sharedMatch[2])} />;
+  const studentMatch = window.location.pathname.match(/^\/s\/([^/]+)/);
+  if (studentMatch && !sharedEditor) return <SharedPlanView mode="student" token={decodeURIComponent(studentMatch[1])} />;
   const [plan, setPlan] = useState(providedPlan || initialPlan);
   const [weekIndex, setWeekIndex] = useState(0);
   const [activeDay, setActiveDay] = useState(0);
@@ -1413,6 +1411,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
               <strong>Enlace del estudiante</strong>
               <span><a href={studentUrl} target="_blank" rel="noopener noreferrer">{studentUrl}</a></span>
               <button className="outline-btn small" onClick={() => navigator.clipboard?.writeText(studentUrl)}>Copiar enlace</button>
+              {prescriberUrl && <><strong>Enlace del prescriptor</strong><span><a href={prescriberUrl} target="_blank" rel="noopener noreferrer">{prescriberUrl}</a></span><button className="outline-btn small" onClick={() => navigator.clipboard?.writeText(prescriberUrl)}>Copiar enlace</button></>}
             </section>
           )}
           {sharedEditor && Object.entries(studentExecution).some(([key]) => key.split(":").length === 3 && Number(key.split(":")[2]) > 0) && (

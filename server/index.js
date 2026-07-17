@@ -109,7 +109,7 @@ app.get("/api/student/plans/:token", async (req, res) => {
 app.get("/api/prescriber/plans/:token", async (req, res) => {
   const doc = await findByToken("prescriberTokenHash", req.params.token);
   if (!doc) return res.status(404).json({ error: "Enlace no válido" });
-  res.json(publicDocument(doc));
+  res.json(publicDocument(doc, true));
 });
 app.put("/api/plans/:id/prescription", async (req, res) => {
   const doc = await findByToken("prescriberTokenHash", req.headers.authorization?.replace(/^Bearer\s+/i, "") || "");
