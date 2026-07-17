@@ -1110,6 +1110,10 @@ nav button:hover,
     white-space: nowrap
 }
 
+.new-profile-plan-btn {
+    margin-left: 6px
+}
+
 .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;

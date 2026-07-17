@@ -403,7 +403,20 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
   if (planMatch && !sharedEditor) return <PlanAccessView token={decodeURIComponent(planMatch[1])} />;
   const studentMatch = window.location.pathname.match(/^\/s\/([^/]+)/);
   if (studentMatch && !sharedEditor) return <SharedPlanView mode="student" token={decodeURIComponent(studentMatch[1])} />;
-  const [plan, setPlan] = useState(providedPlan || initialPlan);
+  const [plan, setPlan] = useState(() => {
+    const storedPlan = !providedPlan && !sharedEditor
+      ? sessionStorage.getItem("exeplanner-new-plan")
+      : null;
+    if (storedPlan) {
+      try {
+        const parsedPlan = JSON.parse(storedPlan);
+        if (Array.isArray(parsedPlan.weeks) && parsedPlan.weeks.length) return parsedPlan;
+      } catch {
+        // Continue with the regular initial plan when storage is invalid.
+      }
+    }
+    return providedPlan || initialPlan;
+  });
   const [weekIndex, setWeekIndex] = useState(0);
   const [activeDay, setActiveDay] = useState(0);
   const [activeExercise, setActiveExercise] = useState(0);
@@ -455,6 +468,9 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
   useEffect(() => {
     localStorage.removeItem(STORAGE_KEY);
   }, []);
+  useEffect(() => {
+    sessionStorage.removeItem("exeplanner-new-plan");
+  }, []);
 
   const updatePlan = (patch) => setPlan((p) => ({ ...p, ...patch }));
   const updateStudentProfile = (patch) =>
@@ -502,6 +518,16 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
       setCopyStatus("Copiado");
     }
     setTimeout(() => setCopyStatus(""), 2200);
+  };
+  const createPlanWithSameProfile = () => {
+    const profile = structuredClone(plan.studentProfile || {});
+    const profilePlan = {
+      ...structuredClone(initialPlan),
+      student: plan.student || "",
+      studentProfile: profile,
+    };
+    sessionStorage.setItem("exeplanner-new-plan", JSON.stringify(profilePlan));
+    window.location.assign("/");
   };
   const bmi =
     Number(plan.studentProfile?.weight) > 0 &&
@@ -1584,6 +1610,13 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
                       type="button"
                     >
                       <Copy size={15} /> {copyStatus || "Copiar perfil"}
+                    </button>
+                    <button
+                      className="soft-btn new-profile-plan-btn"
+                      onClick={createPlanWithSameProfile}
+                      type="button"
+                    >
+                      <Plus size={15} /> Nueva planificación
                     </button>
                   </div>
                   <div className="form-grid student-form-grid">
