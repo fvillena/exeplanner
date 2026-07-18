@@ -499,7 +499,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
       "### Lesiones o limitaciones",
       profile.injuries || "Sin especificar",
       "",
-      "### Antecedentes / notas de salud",
+      "### Antecedentes / notas de salud / hábitos",
       profile.medicalNotes || "Sin especificar",
     ].join("\n");
 
@@ -646,6 +646,18 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
       })),
     }));
     setActiveDay(week.days.length);
+    setActiveExercise(0);
+  };
+  const removeDay = () => {
+    if ((week?.days.length || 0) <= 1) return;
+    setPlan((p) => ({
+      ...p,
+      weeks: p.weeks.map((item) => ({
+        ...item,
+        days: item.days.filter((_, index) => index !== activeDay),
+      })),
+    }));
+    setActiveDay((index) => Math.max(0, index - 1));
     setActiveExercise(0);
   };
   const updateSessionStructure = (patch) =>
@@ -978,22 +990,6 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
       y = oldY;
     });
     y += 49;
-    [
-      ["Descripción del caso", profile.caseDescription],
-      ["Objetivo principal", profile.goal],
-      ["Lesiones o limitaciones", profile.injuries],
-      ["Antecedentes / notas de salud", profile.medicalNotes],
-    ].forEach(([label, value]) => {
-      if (!safe(value)) return;
-      heading(label);
-      pdf.setTextColor(55, 65, 59);
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(9);
-      const lines = pdf.splitTextToSize(value, contentWidth);
-      addPageIfNeeded(lines.length * 4 + 4);
-      pdf.text(lines, margin, y);
-      y += lines.length * 4 + 7;
-    });
     if (safe(plan.generalNotes)) {
       heading("Comentario general");
       pdf.setTextColor(55, 65, 59);
@@ -1747,7 +1743,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
                       />
                     </label>
                     <label className="wide-field profile-final-field">
-                      ANTECEDENTES / NOTAS DE SALUD
+                      ANTECEDENTES / NOTAS DE SALUD / HÁBITOS
                       <textarea
                         value={plan.studentProfile.medicalNotes}
                         placeholder="Información relevante para planificar con seguridad..."
@@ -1866,6 +1862,14 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
                             />
                              <p>El ejercicio se mantiene en todas las semanas. Edita la prescripción de cada semana de forma independiente.</p>
                           </div>
+                          <button
+                            type="button"
+                            className="danger-link remove-session"
+                            onClick={removeDay}
+                            disabled={(week?.days.length || 0) <= 1}
+                          >
+                            <Trash2 size={14} /> Eliminar sesión
+                          </button>
                         </div>
                         <div className="selected-exercise-header">
                           <div>

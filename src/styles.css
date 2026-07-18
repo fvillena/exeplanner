@@ -829,6 +829,21 @@ nav button:hover,
     text-decoration-color: #e0b7bf
 }
 
+.remove-session {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 5px;
+    margin-top: 2px;
+    color: #a61f32 !important;
+    font-weight: 700;
+    opacity: 1 !important
+}
+
+.remove-session:disabled {
+    opacity: .4 !important
+}
+
 .prescription-week-cell {
     display: flex;
     flex-direction: column;
