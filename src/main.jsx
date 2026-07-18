@@ -529,6 +529,10 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
     sessionStorage.setItem("exeplanner-new-plan", JSON.stringify(profilePlan));
     window.location.assign("/");
   };
+  const duplicatePlan = () => {
+    sessionStorage.setItem("exeplanner-new-plan", JSON.stringify(structuredClone(plan)));
+    window.location.assign("/");
+  };
   const bmi =
     Number(plan.studentProfile?.weight) > 0 &&
       Number(plan.studentProfile?.height) > 0
@@ -1418,6 +1422,9 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
           <div className="top-actions">
             <button className="outline-btn" onClick={() => window.location.assign("/")}>
               <Plus size={16} /> Nueva planificación
+            </button>
+            <button className="outline-btn" onClick={duplicatePlan}>
+              <Copy size={16} /> Duplicar planificación
             </button>
             <button
               className="outline-btn"
