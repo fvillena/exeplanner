@@ -324,8 +324,8 @@ function StudentSummaryView({ plan, initialExecution, initialSessionDates, share
   return <div className="app-shell student-plan-shell">
     <main className="main-content">
       <header className="topbar student-topbar"><div className="brand"><div className="brand-mark"><Activity size={20} /></div><span>exe<span>planner</span></span></div><span>Registro de entrenamiento</span></header>
-      <div className="page-wrap">
-        <section className="page-heading student-page-heading"><div><h1>{plan.name || "Planificación"}</h1><p>Planificación de {plan.student || "Estudiante"}. Pulsa una celda para registrar lo que realmente hiciste.</p></div><div className="student-plan-dates"><div className="student-start-date"><span>FECHA DE INICIO</span><strong>{formattedStartDate}</strong></div></div></section>
+       <div className="page-wrap">
+         <section className="page-heading student-page-heading"><div><h1>{plan.name || "Planificación"}</h1><p>Planificación de {plan.student || "Estudiante"}. Pulsa una celda para registrar lo que realmente hiciste.</p></div><div className="student-plan-actions"><div className="student-plan-dates"><div className="student-start-date"><span>FECHA DE INICIO</span><strong>{formattedStartDate}</strong></div></div><App initialPlan={plan} serverPlan={toSchemaPlan(plan)} sharedEditor studentUrl={window.location.href} pdfOnly /></div></section>
         <section className="student-summary-filters" aria-label="Filtros del resumen">
           <label>SESIÓN<select value={selectedSessionId} onChange={(event) => setSelectedSessionId(event.target.value)}><option value="all">Todas las sesiones</option>{sessions.map((session, index) => <option key={session.id} value={String(session.id)}>Sesión {String(index + 1).padStart(2, "0")} · {session.name}</option>)}</select></label>
           <label>SEMANA<select value={selectedWeekNumber} onChange={(event) => setSelectedWeekNumber(event.target.value)}><option value="all">Todas las semanas</option>{plan.weeks.map((week) => <option key={week.id} value={String(week.number)}>Semana {String(week.number).padStart(2, "0")}</option>)}</select></label>
@@ -398,7 +398,7 @@ function PrescriberPlanApp({ data }) {
   return <App initialPlan={plan} serverPlan={data.prescribedPlan} initialExecution={data.execution || {}} sharedEditor studentUrl={studentUrl} prescriberUrl={prescriberUrl} sharedAt={data.sharedAt} prescriberToken={prescriberToken} planId={data.id} />;
 }
 
-function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecution = {}, sharedEditor = false, studentUrl = "", prescriberUrl = "", sharedAt = "", prescriberToken = "", planId = "" }) {
+function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecution = {}, sharedEditor = false, studentUrl = "", prescriberUrl = "", sharedAt = "", prescriberToken = "", planId = "", pdfOnly = false }) {
   const planMatch = window.location.pathname.match(/^\/p\/([^/]+)/);
   if (planMatch && !sharedEditor) return <PlanAccessView token={decodeURIComponent(planMatch[1])} />;
   const studentMatch = window.location.pathname.match(/^\/s\/([^/]+)/);
@@ -1307,6 +1307,9 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
     }
     setPdfState({ loading: false, error: "" });
   };
+  if (pdfOnly) {
+    return <button type="button" className="dark-btn" onClick={exportPdf} disabled={pdfState.loading}><FileText size={16} /> {pdfState.loading ? "Generando..." : "Descargar PDF"}</button>;
+  }
   const importPlan = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;

@@ -844,6 +844,12 @@ nav button:hover,
     opacity: .4 !important
 }
 
+.student-plan-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px
+}
+
 .prescription-week-cell {
     display: flex;
     flex-direction: column;
