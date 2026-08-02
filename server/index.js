@@ -18,7 +18,6 @@ app.use(express.json({ limit: "2mb" }));
 app.use(rateLimit({ windowMs: 60_000, limit: 120 }));
 
 const token = () => crypto.randomBytes(9).toString("base64url").slice(0, 12);
-const hash = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const cleanPlan = (plan) => {
   // The API receives the public schema, but accept the editor's normalized
   // shape as well so a stale client cannot invalidate an otherwise valid plan.
@@ -59,14 +58,13 @@ const cleanPlan = (plan) => {
   return structuredClone(plan);
 };
 const executionKey = (week, session, exercise) => `${week}:${session}:${exercise}`;
-const findByToken = async (field, value) => plans.findOne({ [field]: hash(value) });
+const findByToken = async (field, value) => plans.findOne({ [field]: value });
 const findPlanAccess = async (value) => {
-  const tokenHash = hash(value);
-  const doc = await plans.findOne({ $or: [{ studentTokenHash: tokenHash }, { prescriberTokenHash: tokenHash }] });
+  const doc = await plans.findOne({ $or: [{ studentToken: value }, { prescriberToken: value }] });
   if (!doc) return null;
   return {
     doc,
-    role: doc.prescriberTokenHash === tokenHash ? "prescriber" : "student",
+    role: doc.prescriberToken === value ? "prescriber" : "student",
   };
 };
 const publicDocument = (doc, includeStudentToken = false) => ({
@@ -95,24 +93,24 @@ app.post("/api/plans", async (req, res) => {
     const now = new Date();
     const result = await plans.insertOne({
       studentToken,
-      studentTokenHash: hash(studentToken), prescriberTokenHash: hash(prescriberToken),
+      prescriberToken,
       prescribedPlan, execution: {}, sessionDates: {}, sharedAt: now, createdAt: now, updatedAt: now,
     });
     res.status(201).json({ id: String(result.insertedId), studentToken, prescriberToken });
   } catch (error) { res.status(400).json({ error: error.message }); }
 });
 app.get("/api/student/plans/:token", async (req, res) => {
-  const doc = await findByToken("studentTokenHash", req.params.token);
+  const doc = await findByToken("studentToken", req.params.token);
   if (!doc) return res.status(404).json({ error: "Enlace no válido" });
   res.json(publicDocument(doc, true));
 });
 app.get("/api/prescriber/plans/:token", async (req, res) => {
-  const doc = await findByToken("prescriberTokenHash", req.params.token);
+  const doc = await findByToken("prescriberToken", req.params.token);
   if (!doc) return res.status(404).json({ error: "Enlace no válido" });
   res.json(publicDocument(doc, true));
 });
 app.put("/api/plans/:id/prescription", async (req, res) => {
-  const doc = await findByToken("prescriberTokenHash", req.headers.authorization?.replace(/^Bearer\s+/i, "") || "");
+  const doc = await findByToken("prescriberToken", req.headers.authorization?.replace(/^Bearer\s+/i, "") || "");
   if (!doc || String(doc._id) !== req.params.id) return res.status(401).json({ error: "No autorizado" });
   try {
     const prescribedPlan = cleanPlan(req.body);
@@ -123,7 +121,7 @@ app.put("/api/plans/:id/prescription", async (req, res) => {
   } catch (error) { res.status(400).json({ error: error.message }); }
 });
 app.patch("/api/student/plans/:token/execution", async (req, res) => {
-  const doc = await findByToken("studentTokenHash", req.params.token);
+  const doc = await findByToken("studentToken", req.params.token);
   if (!doc) return res.status(404).json({ error: "Enlace no válido" });
   const { week, session, exercise, values, sessionDate } = req.body;
   if (!Number.isInteger(week) || !Number.isInteger(session) || !Number.isInteger(exercise) || !values || typeof values !== "object")
@@ -146,7 +144,7 @@ app.patch("/api/student/plans/:token/execution", async (req, res) => {
   res.json({ ok: true, key, execution: savedExecution, sessionDate: sessionDate || "" });
 });
 app.patch("/api/student/plans/:token/session-date", async (req, res) => {
-  const doc = await findByToken("studentTokenHash", req.params.token);
+  const doc = await findByToken("studentToken", req.params.token);
   if (!doc) return res.status(404).json({ error: "Enlace no válido" });
   const { week, session, sessionDate } = req.body;
   if (!Number.isInteger(week) || !Number.isInteger(session) || (sessionDate && !/^\d{4}-\d{2}-\d{2}$/.test(sessionDate)))
@@ -159,7 +157,7 @@ app.patch("/api/student/plans/:token/session-date", async (req, res) => {
   res.json({ ok: true, sessionDate: sessionDate || "" });
 });
 app.post("/api/student/plans/:token/execution/reset", async (req, res) => {
-  const doc = await findByToken("studentTokenHash", req.params.token);
+  const doc = await findByToken("studentToken", req.params.token);
   if (!doc) return res.status(404).json({ error: "Enlace no válido" });
   const { week, session, exercise } = req.body;
   const key = executionKey(week, session, exercise);
@@ -167,7 +165,7 @@ app.post("/api/student/plans/:token/execution/reset", async (req, res) => {
   res.json({ ok: true, key });
 });
 app.post("/api/plans/:id/execution/reset", async (req, res) => {
-  const doc = await findByToken("prescriberTokenHash", req.headers.authorization?.replace(/^Bearer\s+/i, "") || "");
+  const doc = await findByToken("prescriberToken", req.headers.authorization?.replace(/^Bearer\s+/i, "") || "");
   if (!doc || String(doc._id) !== req.params.id) return res.status(401).json({ error: "No autorizado" });
   const { week, session, exercise } = req.body;
   const key = executionKey(week, session, exercise);
@@ -178,8 +176,8 @@ app.post("/api/plans/:id/execution/reset", async (req, res) => {
 const start = async () => {
   await client.connect();
   plans = client.db(process.env.MONGODB_DB || "exeplanner").collection("plans");
-  await plans.createIndex({ studentTokenHash: 1 }, { unique: true });
-  await plans.createIndex({ prescriberTokenHash: 1 }, { unique: true });
+  await plans.createIndex({ studentToken: 1 }, { unique: true });
+  await plans.createIndex({ prescriberToken: 1 }, { unique: true });
   app.listen(port, () => console.log(`Exeplanner API escuchando en ${port}`));
 };
 start().catch((error) => {
