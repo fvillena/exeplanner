@@ -6,7 +6,7 @@ Actúa como profesional de la planificación del entrenamiento. Genera una plani
 
 1. Devuelve únicamente el JSON de la planificación dentro de un bloque de código Markdown etiquetado como `json`, usando exactamente este formato: ```json ... ```.
 2. El JSON debe poder importarse directamente en Exeplanner.
-3. Conserva exactamente los datos del paciente. Si falta un dato, usa `""`.
+3. Conserva exactamente los datos del paciente. Si falta un dato de texto obligatorio, usa `""`.
 4. Genera una planificación segura, progresiva y coherente con el objetivo, el caso, las lesiones y los antecedentes.
 5. Usa únicamente IDs enteros positivos. Los IDs de sesiones, ejercicios y semanas deben ser únicos dentro de sus respectivas colecciones.
 6. No uses un atributo raíz `weeks` ni una estructura `weeks[].sessions`.
@@ -29,7 +29,7 @@ Antes de responder, verifica obligatoriamente que:
 - Exista `sessions` como array.
 - No exista `weeks` en el objeto raíz.
 - Cada sesión tenga un `id` entero y un array `exercises`.
-- Cada ejercicio tenga `id` entero, `name`, `type`, `order` y `plan`.
+- Cada ejercicio tenga `id` entero, `name`, `description`, `type`, `order` y `plan`.
 - `studentProfile` tenga siempre `age`, `sex`, `weight`, `height`, `bodyFat`, `injuries`, `medicalNotes`, `caseDescription` y `goal`.
 - `age`, `weight`, `height` y `bodyFat` conserven exactamente el formato numérico en texto, sin unidades.
 - Todos los ejercicios tengan una entrada `plan` por cada semana.
@@ -78,7 +78,9 @@ Cada sesión se define una sola vez:
           "sets": "3",
           "reps": "12",
           "load": "8 kg",
-          "rest": "60"
+          "rest": "60",
+          "metric": "",
+          "intensity": ""
         },
         {
           "week": 2,
@@ -86,6 +88,8 @@ Cada sesión se define una sola vez:
           "reps": "12",
           "load": "10 kg",
           "rest": "60",
+          "metric": "",
+          "intensity": "",
           "notes": "Aumentar solo si la técnica se mantiene."
         }
       ]
@@ -94,11 +98,11 @@ Cada sesión se define una sola vez:
 }
 ```
 
-`plan` pertenece a cada ejercicio y contiene su progresión semanal. Incluye exactamente una entrada por cada semana. `week` es un entero consecutivo desde `1`. Los campos `sets`, `reps`, `load`, `rest`, `metric`, `intensity` y `notes` son opcionales según el tipo de ejercicio; no añadas campos vacíos innecesarios. `notes`, cuando exista, es específica de esa semana y no debe copiarse automáticamente a las demás semanas.
+`plan` pertenece a cada ejercicio y contiene su progresión semanal. Incluye exactamente una entrada por cada semana. `week` es un entero consecutivo desde `1`. Cada entrada debe contener siempre `week`, `sets`, `reps`, `load`, `rest`, `metric` e `intensity`. Usa `""` en los campos de prescripción que no correspondan al tipo de ejercicio. `notes` es el único campo opcional de una entrada: inclúyelo solo cuando exista una indicación específica para esa semana y no lo copies automáticamente a las demás semanas.
 
-Los mismos ejercicios deben conservar el mismo `id` durante todo el plan. No dupliques ejercicios por semana: la progresión debe estar dentro de `exercise.plan`. `description` es opcional y pertenece al ejercicio, no a una semana. Úsala para explicar cómo se realiza, qué objetivo tiene o qué adaptación requiere. `order` debe ser consecutivo dentro de cada sesión. `type` solo puede ser `strength`, `cardio` o `mobility`.
+Los mismos ejercicios deben conservar el mismo `id` durante todo el plan. No dupliques ejercicios por semana: la progresión debe estar dentro de `exercise.plan`. `description` debe estar siempre presente y pertenece al ejercicio, no a una semana; usa `""` si no se necesita. Puede explicar cómo se realiza, qué objetivo tiene o qué adaptación requiere. `order` debe ser consecutivo dentro de cada sesión. `type` solo puede ser `strength`, `cardio` o `mobility`.
 
-Para ejercicios de fuerza utiliza principalmente `sets`, `reps`, `load` y `rest`. Para cardio y movilidad utiliza `metric` e `intensity`. La intensidad debe ser una indicación como `Suave`, `Moderada`, `Alta`, `RPE 7` o `Zona 2`. `metric` debe indicar duración, distancia o volumen, por ejemplo `30 minutos`, `5 km` o `10 repeticiones por lado`.
+Para ejercicios de fuerza completa principalmente `sets`, `reps`, `load` y `rest`, y deja `metric` e `intensity` como `""` cuando no correspondan. Para cardio y movilidad completa `metric` e `intensity`, y deja `sets`, `reps`, `load` y `rest` como `""` cuando no correspondan. La intensidad debe ser una indicación como `Suave`, `Moderada`, `Alta`, `RPE 7` o `Zona 2`. `metric` debe indicar duración, distancia o volumen, por ejemplo `30 minutos`, `5 km` o `10 repeticiones por lado`.
 
 ## Criterios de planificación
 

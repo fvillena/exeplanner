@@ -1,0 +1,663 @@
+{
+  "version": 2,
+  "name": "Fortalecimiento general para principiante",
+  "student": "Carlos Rojas",
+  "studentProfile": {
+    "age": "41",
+    "sex": "Masculino",
+    "weight": "84",
+    "height": "174",
+    "bodyFat": "27",
+    "injuries": "Molestia lumbar ocasional, sin dolor actual",
+    "medicalNotes": "Apto para actividad física según evaluación previa. Controlar molestias lumbares durante los ejercicios.",
+    "caseDescription": "Adulto con baja experiencia reciente de entrenamiento de fuerza, trabajo sedentario y disponibilidad de tres sesiones semanales.",
+    "goal": "Mejorar fuerza general, movilidad y adherencia al ejercicio"
+  },
+  "startDate": "2026-08-10",
+  "generalNotes": "Realizar entre 5 y 10 minutos de movilidad y calentamiento antes de cada sesión. Mantener una técnica controlada y detener el ejercicio si aparece dolor. Aumentar la carga únicamente cuando se completen todas las repeticiones con buena técnica.",
+  "sessions": [
+    {
+      "id": 1,
+      "name": "Fuerza tren inferior y empuje",
+      "exercises": [
+        {
+          "id": 1,
+          "name": "Sentadilla a caja",
+          "description": "Descender hasta tocar suavemente una caja o banco, manteniendo el pecho elevado y las rodillas alineadas con los pies.",
+          "type": "strength",
+          "order": 1,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "10",
+              "load": "Peso corporal",
+              "rest": "75",
+              "notes": "Usar una caja que permita controlar cómodamente la profundidad."
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "12",
+              "load": "Peso corporal",
+              "rest": "75"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "10",
+              "load": "4 kg",
+              "rest": "75"
+            },
+            {
+              "week": 4,
+              "sets": "4",
+              "reps": "10",
+              "load": "4 kg",
+              "rest": "90"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "10",
+              "load": "6 kg",
+              "rest": "90"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "8",
+              "load": "8 kg",
+              "rest": "90"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "name": "Press de pecho en máquina",
+          "description": "Empujar de forma controlada sin bloquear bruscamente los codos.",
+          "type": "strength",
+          "order": 2,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "12",
+              "load": "15 kg",
+              "rest": "60"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "12",
+              "load": "17.5 kg",
+              "rest": "60"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "10",
+              "load": "20 kg",
+              "rest": "75"
+            },
+            {
+              "week": 4,
+              "sets": "4",
+              "reps": "10",
+              "load": "20 kg",
+              "rest": "75"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "8",
+              "load": "22.5 kg",
+              "rest": "90"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "8",
+              "load": "25 kg",
+              "rest": "90"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "name": "Peso muerto rumano con mancuernas",
+          "description": "Llevar la cadera hacia atrás manteniendo la espalda neutra y las mancuernas cerca de las piernas.",
+          "type": "strength",
+          "order": 3,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "10",
+              "load": "6 kg por mano",
+              "rest": "75",
+              "notes": "Recorrido cómodo; no buscar profundidad si se pierde la posición lumbar."
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "12",
+              "load": "6 kg por mano",
+              "rest": "75"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "10",
+              "load": "8 kg por mano",
+              "rest": "75"
+            },
+            {
+              "week": 4,
+              "sets": "4",
+              "reps": "10",
+              "load": "8 kg por mano",
+              "rest": "90"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "8",
+              "load": "10 kg por mano",
+              "rest": "90"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "8",
+              "load": "10 kg por mano",
+              "rest": "90"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "name": "Plancha frontal inclinada",
+          "description": "Apoyar las manos en un banco y mantener el cuerpo alineado, sin hundir la zona lumbar.",
+          "type": "strength",
+          "order": 4,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "20 segundos",
+              "rest": "45"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "25 segundos",
+              "rest": "45"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "30 segundos",
+              "rest": "45"
+            },
+            {
+              "week": 4,
+              "sets": "3",
+              "reps": "35 segundos",
+              "rest": "45"
+            },
+            {
+              "week": 5,
+              "sets": "3",
+              "reps": "40 segundos",
+              "rest": "45"
+            },
+            {
+              "week": 6,
+              "sets": "3",
+              "reps": "45 segundos",
+              "rest": "45"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Cardio, movilidad y estabilidad",
+      "exercises": [
+        {
+          "id": 5,
+          "name": "Caminata en cinta o bicicleta estática",
+          "description": "Mantener una intensidad que permita conversar, pero no cantar cómodamente.",
+          "type": "cardio",
+          "order": 1,
+          "plan": [
+            {
+              "week": 1,
+              "metric": "20 minutos",
+              "intensity": "Suave a moderada"
+            },
+            {
+              "week": 2,
+              "metric": "25 minutos",
+              "intensity": "Moderada"
+            },
+            {
+              "week": 3,
+              "metric": "30 minutos",
+              "intensity": "Moderada"
+            },
+            {
+              "week": 4,
+              "metric": "30 minutos",
+              "intensity": "Moderada, con 3 aceleraciones de 1 minuto"
+            },
+            {
+              "week": 5,
+              "metric": "35 minutos",
+              "intensity": "Moderada, con 4 aceleraciones de 1 minuto"
+            },
+            {
+              "week": 6,
+              "metric": "40 minutos",
+              "intensity": "Moderada, con 5 aceleraciones de 1 minuto"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "name": "Movilidad de cadera, columna torácica y tobillos",
+          "description": "Realizar movimientos suaves y controlados, sin dolor.",
+          "type": "mobility",
+          "order": 2,
+          "plan": [
+            {
+              "week": 1,
+              "metric": "10 minutos",
+              "intensity": "Suave"
+            },
+            {
+              "week": 2,
+              "metric": "10 minutos",
+              "intensity": "Suave"
+            },
+            {
+              "week": 3,
+              "metric": "12 minutos",
+              "intensity": "Suave"
+            },
+            {
+              "week": 4,
+              "metric": "12 minutos",
+              "intensity": "Suave"
+            },
+            {
+              "week": 5,
+              "metric": "15 minutos",
+              "intensity": "Suave"
+            },
+            {
+              "week": 6,
+              "metric": "15 minutos",
+              "intensity": "Suave"
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "name": "Bird dog",
+          "description": "Extender brazo y pierna contrarios manteniendo la pelvis estable.",
+          "type": "strength",
+          "order": 3,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "8 por lado",
+              "rest": "45"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "10 por lado",
+              "rest": "45"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "12 por lado",
+              "rest": "45"
+            },
+            {
+              "week": 4,
+              "sets": "3",
+              "reps": "12 por lado",
+              "rest": "45"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "10 por lado",
+              "rest": "45"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "12 por lado",
+              "rest": "45"
+            }
+          ]
+        },
+        {
+          "id": 8,
+          "name": "Puente de glúteos",
+          "description": "Elevar la cadera apretando glúteos, evitando extender en exceso la zona lumbar.",
+          "type": "strength",
+          "order": 4,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "12",
+              "rest": "45"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "15",
+              "rest": "45"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "12",
+              "load": "5 kg",
+              "rest": "60"
+            },
+            {
+              "week": 4,
+              "sets": "3",
+              "reps": "15",
+              "load": "5 kg",
+              "rest": "60"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "12",
+              "load": "8 kg",
+              "rest": "60"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "12",
+              "load": "10 kg",
+              "rest": "60"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Fuerza tren superior y unilateral",
+      "exercises": [
+        {
+          "id": 9,
+          "name": "Remo sentado en máquina",
+          "description": "Llevar los codos hacia atrás sin elevar los hombros.",
+          "type": "strength",
+          "order": 1,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "12",
+              "load": "20 kg",
+              "rest": "60"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "12",
+              "load": "22.5 kg",
+              "rest": "60"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "10",
+              "load": "25 kg",
+              "rest": "75"
+            },
+            {
+              "week": 4,
+              "sets": "4",
+              "reps": "10",
+              "load": "25 kg",
+              "rest": "75"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "8",
+              "load": "27.5 kg",
+              "rest": "90"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "8",
+              "load": "30 kg",
+              "rest": "90"
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "name": "Zancada estática asistida",
+          "description": "Usar un apoyo estable si es necesario. Mantener el tronco erguido y controlar el descenso.",
+          "type": "strength",
+          "order": 2,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "8 por lado",
+              "rest": "60"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "10 por lado",
+              "rest": "60"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "10 por lado",
+              "load": "2 kg por mano",
+              "rest": "60"
+            },
+            {
+              "week": 4,
+              "sets": "3",
+              "reps": "12 por lado",
+              "load": "2 kg por mano",
+              "rest": "60"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "10 por lado",
+              "load": "4 kg por mano",
+              "rest": "75"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "10 por lado",
+              "load": "4 kg por mano",
+              "rest": "75"
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "name": "Jalón al pecho",
+          "description": "Tirar de la barra hacia la parte superior del pecho sin llevar los hombros hacia las orejas.",
+          "type": "strength",
+          "order": 3,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "12",
+              "load": "20 kg",
+              "rest": "60"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "12",
+              "load": "22.5 kg",
+              "rest": "60"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "10",
+              "load": "25 kg",
+              "rest": "75"
+            },
+            {
+              "week": 4,
+              "sets": "4",
+              "reps": "10",
+              "load": "25 kg",
+              "rest": "75"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "8",
+              "load": "27.5 kg",
+              "rest": "90"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "8",
+              "load": "30 kg",
+              "rest": "90"
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "name": "Press de hombros sentado con mancuernas",
+          "description": "Mantener el abdomen activo y elevar las mancuernas sin arquear la espalda.",
+          "type": "strength",
+          "order": 4,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "10",
+              "load": "4 kg por mano",
+              "rest": "60"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "12",
+              "load": "4 kg por mano",
+              "rest": "60"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "10",
+              "load": "5 kg por mano",
+              "rest": "75"
+            },
+            {
+              "week": 4,
+              "sets": "3",
+              "reps": "12",
+              "load": "5 kg por mano",
+              "rest": "75"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "8",
+              "load": "6 kg por mano",
+              "rest": "90"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "8",
+              "load": "6 kg por mano",
+              "rest": "90"
+            }
+          ]
+        },
+        {
+          "id": 13,
+          "name": "Pallof press con banda elástica",
+          "description": "Empujar la banda al frente resistiendo la rotación del tronco.",
+          "type": "strength",
+          "order": 5,
+          "plan": [
+            {
+              "week": 1,
+              "sets": "3",
+              "reps": "10 por lado",
+              "load": "Banda ligera",
+              "rest": "45"
+            },
+            {
+              "week": 2,
+              "sets": "3",
+              "reps": "12 por lado",
+              "load": "Banda ligera",
+              "rest": "45"
+            },
+            {
+              "week": 3,
+              "sets": "3",
+              "reps": "12 por lado",
+              "load": "Banda media",
+              "rest": "45"
+            },
+            {
+              "week": 4,
+              "sets": "3",
+              "reps": "15 por lado",
+              "load": "Banda media",
+              "rest": "45"
+            },
+            {
+              "week": 5,
+              "sets": "4",
+              "reps": "12 por lado",
+              "load": "Banda media",
+              "rest": "45"
+            },
+            {
+              "week": 6,
+              "sets": "4",
+              "reps": "15 por lado",
+              "load": "Banda media",
+              "rest": "45"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
