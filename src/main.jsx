@@ -227,6 +227,47 @@ const formatChileDate = (value) => {
       });
 };
 
+const URL_PATTERN = /(?:https?:\/\/|www\.)[^\s<>()\[\]{}]+|\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{2,63})(?:\/[^\s<>()\[\]{}]*)?/gi;
+const TRAILING_URL_PUNCTUATION = /[.,;:!?]+$/;
+const tokenizeUrls = (value) => {
+  const text = String(value || "");
+  const segments = [];
+  let lastIndex = 0;
+  URL_PATTERN.lastIndex = 0;
+  let match;
+  while ((match = URL_PATTERN.exec(text))) {
+    const rawUrl = match[0];
+    const displayedUrl = rawUrl.replace(TRAILING_URL_PUNCTUATION, "");
+    const url = /^https?:\/\//i.test(displayedUrl)
+      ? displayedUrl
+      : `https://${displayedUrl}`;
+    if (!displayedUrl) continue;
+    if (match.index > lastIndex) segments.push({ text: text.slice(lastIndex, match.index) });
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        segments.push({ text: displayedUrl, url });
+      } else {
+        segments.push({ text: rawUrl });
+      }
+    } catch {
+      segments.push({ text: rawUrl });
+    }
+    const trailing = rawUrl.slice(displayedUrl.length);
+    if (trailing) segments.push({ text: trailing });
+    lastIndex = match.index + rawUrl.length;
+  }
+  if (lastIndex < text.length) segments.push({ text: text.slice(lastIndex) });
+  return segments.length ? segments : [{ text }];
+};
+
+function LinkifiedText({ children }) {
+  return tokenizeUrls(children).map((segment, index) =>
+    segment.url ? <a className="linkified-url" href={segment.url} key={`${segment.url}-${index}`} rel="noreferrer" target="_blank">{segment.text}</a>
+      : <React.Fragment key={`text-${index}`}>{segment.text}</React.Fragment>,
+  );
+}
+
 function SummaryExerciseValues({ exercise }) {
   return <>
     {sharedExerciseDetails(exercise).map((detail, index) =>
@@ -326,13 +367,14 @@ function StudentSummaryView({ plan, initialExecution, initialSessionDates, share
       <header className="topbar student-topbar"><div className="brand"><div className="brand-mark"><Activity size={20} /></div><span>exe<span>planner</span></span></div><span>Registro de entrenamiento</span></header>
        <div className="page-wrap">
          <section className="page-heading student-page-heading"><div><h1>{plan.name || "Planificación"}</h1><p>Planificación de {plan.student || "Estudiante"}. Pulsa una celda para registrar lo que realmente hiciste.</p></div><div className="student-plan-actions"><div className="student-plan-dates"><div className="student-start-date"><span>FECHA DE INICIO</span><strong>{formattedStartDate}</strong></div></div><App initialPlan={plan} serverPlan={toSchemaPlan(plan)} sharedEditor studentUrl={window.location.href} pdfOnly /></div></section>
-        <section className="student-summary-filters" aria-label="Filtros del resumen">
+         {plan.generalNotes?.trim() && <section className="student-general-notes"><h2>Comentario general</h2><p><LinkifiedText>{plan.generalNotes}</LinkifiedText></p></section>}
+         <section className="student-summary-filters" aria-label="Filtros del resumen">
           <label>SESIÓN<select value={selectedSessionId} onChange={(event) => setSelectedSessionId(event.target.value)}><option value="all">Todas las sesiones</option>{sessions.map((session, index) => <option key={session.id} value={String(session.id)}>Sesión {String(index + 1).padStart(2, "0")} · {session.name}</option>)}</select></label>
           <label>SEMANA<select value={selectedWeekNumber} onChange={(event) => setSelectedWeekNumber(event.target.value)}><option value="all">Todas las semanas</option>{plan.weeks.map((week) => <option key={week.id} value={String(week.number)}>Semana {String(week.number).padStart(2, "0")}</option>)}</select></label>
           {(selectedSessionId !== "all" || selectedWeekNumber !== "all") && <button className="summary-filter-reset" onClick={() => { setSelectedSessionId("all"); setSelectedWeekNumber("all"); }}>Mostrar todo</button>}
         </section>
       <section className={`comparison-section ${selectedWeekNumber !== "all" ? "single-week-summary" : ""}`}><div className="comparison-heading"><div><h2>Resumen por semanas</h2><p>Compara la progresión de cada ejercicio a lo largo del plan.</p></div></div>
-      {sessions.filter((session) => selectedSessionId === "all" || String(session.id) === selectedSessionId).map((session, sessionIndex) => <section className="comparison-card shared-summary-card" key={session.id}><div className="comparison-title"><span className="comparison-day-number">{String(sessions.indexOf(session) + 1).padStart(2, "0")}</span><h3>{session.name || `Sesión ${sessions.indexOf(session) + 1}`}</h3></div><div className="comparison-table-wrap"><table className="comparison-table"><thead><tr><th>Ejercicio</th>{plan.weeks.filter((week) => selectedWeekNumber === "all" || String(week.number) === selectedWeekNumber).map((week) => { const dateKey = `${week.number}:${session.id}`; const isEditingDate = editingSessionDate === dateKey; return <th key={week.id}>Semana {String(week.number).padStart(2, "0")}<div className="student-session-date">{isEditingDate ? <div className="session-date-editor"><input lang="es-CL" aria-label="Fecha de sesión" type="date" value={sessionDateDraft} onChange={(event) => setSessionDateDraft(event.target.value)} /><button type="button" onClick={() => saveSessionDate(week.number, session.id, sessionDateDraft)}>Guardar</button><button type="button" onClick={() => setEditingSessionDate("")}>Cancelar</button></div> : <button type="button" className="session-date-display" onClick={() => { setEditingSessionDate(dateKey); setSessionDateDraft(sessionDates[dateKey] || ""); }}>{formatChileDate(sessionDates[dateKey])}</button>}</div></th>; })}</tr></thead><tbody>{session.exercises.map((baseExercise) => <tr key={baseExercise.id}><th><span>{baseExercise.name}</span>{baseExercise.description && <small className="comparison-exercise-description">{baseExercise.description}</small>}</th>{plan.weeks.filter((week) => selectedWeekNumber === "all" || String(week.number) === selectedWeekNumber).map((week) => {
+      {sessions.filter((session) => selectedSessionId === "all" || String(session.id) === selectedSessionId).map((session, sessionIndex) => <section className="comparison-card shared-summary-card" key={session.id}><div className="comparison-title"><span className="comparison-day-number">{String(sessions.indexOf(session) + 1).padStart(2, "0")}</span><h3>{session.name || `Sesión ${sessions.indexOf(session) + 1}`}</h3></div><div className="comparison-table-wrap"><table className="comparison-table"><thead><tr><th>Ejercicio</th>{plan.weeks.filter((week) => selectedWeekNumber === "all" || String(week.number) === selectedWeekNumber).map((week) => { const dateKey = `${week.number}:${session.id}`; const isEditingDate = editingSessionDate === dateKey; return <th key={week.id}>Semana {String(week.number).padStart(2, "0")}<div className="student-session-date">{isEditingDate ? <div className="session-date-editor"><input lang="es-CL" aria-label="Fecha de sesión" type="date" value={sessionDateDraft} onChange={(event) => setSessionDateDraft(event.target.value)} /><button type="button" onClick={() => saveSessionDate(week.number, session.id, sessionDateDraft)}>Guardar</button><button type="button" onClick={() => setEditingSessionDate("")}>Cancelar</button></div> : <button type="button" className="session-date-display" onClick={() => { setEditingSessionDate(dateKey); setSessionDateDraft(sessionDates[dateKey] || ""); }}>{formatChileDate(sessionDates[dateKey])}</button>}</div></th>; })}</tr></thead><tbody>{session.exercises.map((baseExercise) => <tr key={baseExercise.id}><th><span>{baseExercise.name}</span>{baseExercise.description && <small className="comparison-exercise-description"><LinkifiedText>{baseExercise.description}</LinkifiedText></small>}</th>{plan.weeks.filter((week) => selectedWeekNumber === "all" || String(week.number) === selectedWeekNumber).map((week) => {
         const exercise = week.days?.[sessionIndex]?.exercises?.find((item) => item.id === baseExercise.id) || baseExercise;
         const key = `${week.number}:${session.id}:${exercise.id}`;
         const actual = execution[key];
@@ -357,16 +399,15 @@ function StudentSummaryView({ plan, initialExecution, initialSessionDates, share
                   {actual.completed && <small className="student-completed-label">Completado</small>}
                 </div>
                 </div>
-              <div className="student-notes-row">
-                {exercise.rest && <small className="student-fixed-detail">Descanso: {exercise.rest} s</small>}
-                {exercise.notes && <small className="comparison-exercise-note"><FileText size={9} /> {exercise.notes}</small>}
-              </div>
               </> : <>
-              <SummaryExerciseValues exercise={exercise} />
-              {exercise.rest && <small className="student-fixed-detail">Descanso: {exercise.rest} s</small>}
-              {exercise.notes && <small className="comparison-exercise-note"><FileText size={9} /> {exercise.notes}</small>}
-            </>}
+                <SummaryExerciseValues exercise={exercise} />
+                {exercise.rest && <small className="student-fixed-detail">Descanso: {exercise.rest} s</small>}
+              </>}
             </button>
+            <div className="student-notes-row">
+              {actual && exercise.rest && <small className="student-fixed-detail">Descanso: {exercise.rest} s</small>}
+              {exercise.notes && <small className="comparison-exercise-note"><FileText size={9} /> <LinkifiedText>{exercise.notes}</LinkifiedText></small>}
+            </div>
           </> : <div className="student-summary-editor">
             {exercise.type === "strength" ? <>
               <input value={draft.sets} placeholder="Series" onChange={(e) => setDraft((value) => ({ ...value, sets: e.target.value }))} />
@@ -889,6 +930,88 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
     const muted = [126, 93, 99];
     const line = [235, 213, 217];
     const safe = (value) => String(value || "").trim();
+    const getPdfLinkedLines = (value, width, fontSize, fontStyle = "normal") => {
+      pdf.setFont("helvetica", fontStyle);
+      pdf.setFontSize(fontSize);
+      const lines = [];
+      let currentLine = [];
+      let currentWidth = 0;
+      const append = (text, url) => {
+        if (!text) return;
+        const textWidth = pdf.getTextWidth(text);
+        if (currentLine.length && currentWidth + textWidth > width) {
+          lines.push(currentLine);
+          currentLine = [];
+          currentWidth = 0;
+        }
+        currentLine.push({ text, url });
+        currentWidth += textWidth;
+      };
+      const appendUrl = (text, url) => {
+        let remaining = text;
+        while (remaining) {
+          const availableWidth = width - currentWidth;
+          let length = remaining.length;
+          while (length > 1 && pdf.getTextWidth(remaining.slice(0, length)) > availableWidth) {
+            length -= 1;
+          }
+          if (length === 1 && pdf.getTextWidth(remaining) > availableWidth && currentLine.length) {
+            lines.push(currentLine);
+            currentLine = [];
+            currentWidth = 0;
+            continue;
+          }
+          const part = remaining.slice(0, length);
+          currentLine.push({ text: part, url });
+          currentWidth += pdf.getTextWidth(part);
+          remaining = remaining.slice(length);
+          if (remaining) {
+            lines.push(currentLine);
+            currentLine = [];
+            currentWidth = 0;
+          }
+        }
+      };
+      tokenizeUrls(value).forEach((segment) => {
+        const parts = segment.url ? [segment.text] : segment.text.split(/(\s+)/);
+        parts.forEach((part) => {
+          if (!part) return;
+          if (part.includes("\n")) {
+            part.split(/(\n)/).forEach((piece) => {
+              if (piece === "\n") {
+                lines.push(currentLine);
+                currentLine = [];
+                currentWidth = 0;
+              } else {
+                append(piece, segment.url);
+              }
+            });
+          } else if (segment.url) {
+            appendUrl(part, segment.url);
+          } else {
+            append(part, segment.url);
+          }
+        });
+      });
+      if (currentLine.length || !lines.length) lines.push(currentLine);
+      return lines;
+    };
+    const drawPdfLinkedLines = (lines, x, startY, lineHeight, fontSize, fontStyle, color, align = "left") => {
+      pdf.setFont("helvetica", fontStyle);
+      pdf.setFontSize(fontSize);
+      lines.forEach((parts, lineIndex) => {
+        const lineWidth = parts.reduce((total, part) => total + pdf.getTextWidth(part.text), 0);
+        let cursorX = align === "center" ? x - lineWidth / 2 : x;
+        parts.forEach((part) => {
+          pdf.setTextColor(...(part.url ? green : color));
+          pdf.text(part.text, cursorX, startY + lineIndex * lineHeight, { lineHeightFactor: 1.15 });
+          if (part.url) {
+            pdf.link(cursorX, startY + lineIndex * lineHeight - fontSize * 0.35, pdf.getTextWidth(part.text), fontSize * 0.5, { url: part.url });
+          }
+          cursorX += pdf.getTextWidth(part.text);
+        });
+      });
+    };
     const addPageIfNeeded = (height) => {
       if (y + height > pageHeight - 17) {
         pdf.addPage();
@@ -995,9 +1118,9 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
       pdf.setTextColor(55, 65, 59);
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(9);
-      const lines = pdf.splitTextToSize(plan.generalNotes, contentWidth);
+      const lines = getPdfLinkedLines(plan.generalNotes, contentWidth, 9);
       addPageIfNeeded(lines.length * 4 + 4);
-      pdf.text(lines, margin, y);
+      drawPdfLinkedLines(lines, margin, y, 4, 9, "normal", [55, 65, 59]);
       y += lines.length * 4 + 7;
     }
     if (studentUrl) {
@@ -1013,11 +1136,20 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(8);
       pdf.text("Escanea el código QR para abrir el plan.", textX, y + 14);
-      const urlLines = pdf.splitTextToSize(studentUrl, contentWidth - qrSize - 8);
-      pdf.setTextColor(55, 65, 59);
-      pdf.setFontSize(7.5);
-      pdf.text(urlLines, textX, y + 21, { lineHeightFactor: 1.25 });
-      y += 42;
+       const urlLines = pdf.splitTextToSize(studentUrl, contentWidth - qrSize - 8);
+       pdf.setTextColor(...green);
+       pdf.setFontSize(7.5);
+       pdf.text(urlLines, textX, y + 21, { lineHeightFactor: 1.25 });
+       urlLines.forEach((urlLine, index) => {
+         pdf.link(
+           textX,
+           y + 18 + index * 3,
+           pdf.getTextWidth(urlLine),
+           3,
+           { url: studentUrl },
+         );
+       });
+       y += 42;
     }
     // La planificación semanal comienza siempre en una página independiente.
     pdf.addPage();
@@ -1042,6 +1174,8 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
         pdf.setFontSize(fontSize);
         return pdf.splitTextToSize(String(value || ""), colWidth - 4);
       };
+      const getLinkedCellLines = (value, fontSize = bodyFontSize, fontStyle = "normal") =>
+        getPdfLinkedLines(value, colWidth - 4, fontSize, fontStyle);
       const drawExerciseCell = (exercise, x, cellY) => {
         const cellLeft = x - 2;
         const drawCenteredLines = (lines, startY, fontSize, fontStyle, color) => {
@@ -1113,17 +1247,20 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
           });
         }
         if (exercise.notes) {
-          const noteLines = getCellLines(
+          const noteLines = getLinkedCellLines(
             exercise.notes,
             secondaryFontSize,
             "italic",
           );
-          drawCenteredLines(
+          drawPdfLinkedLines(
             noteLines,
+            cellLeft + colWidth / 2,
             secondaryY,
+            lineHeight,
             secondaryFontSize,
             "italic",
             [150, 160, 154],
+            "center",
           );
         }
       };
@@ -1141,7 +1278,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
         const exerciseLabelLines =
           getCellLines(row.name, bodyFontSize, "bold").length +
           (row.description
-            ? getCellLines(row.description, secondaryFontSize).length
+            ? getLinkedCellLines(row.description, secondaryFontSize).length
             : 0);
         const lineCounts = [
           exerciseLabelLines,
@@ -1178,7 +1315,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
                   0,
                 ) +
               (exercise.notes
-                ? getCellLines(
+                ? getLinkedCellLines(
                   exercise.notes,
                   secondaryFontSize,
                   "italic",
@@ -1249,17 +1386,14 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
           ),
         );
         if (row.description) {
-          pdf.setTextColor(138, 149, 142);
-          pdf.setFont("helvetica", "normal");
-          pdf.setFontSize(secondaryFontSize);
-          getCellLines(row.description, secondaryFontSize).forEach(
-            (descriptionLine, lineIndex) =>
-              pdf.text(
-                descriptionLine,
-                margin + 1,
-                y + 5 + (nameLines.length + lineIndex) * lineHeight,
-                { lineHeightFactor: 1.15 },
-              ),
+          drawPdfLinkedLines(
+            getLinkedCellLines(row.description, secondaryFontSize),
+            margin + 1,
+            y + 5 + nameLines.length * lineHeight,
+            lineHeight,
+            secondaryFontSize,
+            "normal",
+            [138, 149, 142],
           );
         }
         plan.weeks.forEach((weekItem, index) => {
@@ -2222,7 +2356,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
                                 <span>{row.name || "Sin nombre"}</span>
                                 {row.description && (
                                   <small className="comparison-exercise-description">
-                                    {row.description}
+                                    <LinkifiedText>{row.description}</LinkifiedText>
                                   </small>
                                 )}
                               </th>

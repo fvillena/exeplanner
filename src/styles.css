@@ -1928,6 +1928,39 @@ nav button:hover,
     margin-top: 18px
 }
 
+.student-general-notes {
+    margin-top: 20px;
+    padding: 16px 18px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px
+}
+
+.student-general-notes h2 {
+    margin: 0 0 7px;
+    font: 700 14px Manrope
+}
+
+.student-general-notes p {
+    margin: 0;
+    color: #59665f;
+    line-height: 1.5;
+    white-space: pre-wrap
+}
+
+.linkified-url {
+    color: var(--green);
+    overflow-wrap: anywhere;
+    text-decoration: underline;
+    text-underline-offset: 2px
+}
+
+.linkified-url:focus-visible {
+    outline: 2px solid #bd6573;
+    outline-offset: 2px;
+    border-radius: 2px
+}
+
 .comparison-heading {
     margin-bottom: 12px
 }
@@ -2058,6 +2091,10 @@ nav button:hover,
     color: inherit;
     cursor: pointer;
     font: inherit
+}
+
+.student-summary-cell .student-notes-row {
+    margin-top: 6px
 }
 
 .comparison-exercise-link:hover strong,
