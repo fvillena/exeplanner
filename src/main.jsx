@@ -1114,14 +1114,13 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
     });
     y += 49;
     if (safe(plan.generalNotes)) {
+      const notesLines = getPdfLinkedLines(plan.generalNotes, contentWidth, 9);
+      const notesBlockHeight = 6 + notesLines.length * 4 + 7;
+      addPageIfNeeded(notesBlockHeight);
       heading("Comentario general");
       pdf.setTextColor(55, 65, 59);
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(9);
-      const lines = getPdfLinkedLines(plan.generalNotes, contentWidth, 9);
-      addPageIfNeeded(lines.length * 4 + 4);
-      drawPdfLinkedLines(lines, margin, y, 4, 9, "normal", [55, 65, 59]);
-      y += lines.length * 4 + 7;
+      drawPdfLinkedLines(notesLines, margin, y, 4, 9, "normal", [55, 65, 59]);
+      y += notesLines.length * 4 + 7;
     }
     if (studentUrl) {
       addPageIfNeeded(48);
