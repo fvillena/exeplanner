@@ -366,7 +366,23 @@ function StudentSummaryView({ plan, initialExecution, initialSessionDates, share
     <main className="main-content">
       <header className="topbar student-topbar"><div className="brand"><div className="brand-mark"><Activity size={20} /></div><span>exe<span>planner</span></span></div><span>Registro de entrenamiento</span></header>
        <div className="page-wrap">
-         <section className="page-heading student-page-heading"><div className="student-hero"><span className="student-hero-eyebrow">Plan de entrenamiento para</span><h1 className="student-hero-name">{plan.student || "Estudiante"}</h1><p className="student-hero-plan">{plan.name || "Planificación"}</p><p className="student-hero-instruction">Pulsa una celda para registrar lo que realmente hiciste.</p></div><div className="student-plan-actions"><div className="student-plan-dates"><div className="student-start-date"><span>FECHA DE INICIO</span><strong>{formattedStartDate}</strong></div></div><App initialPlan={plan} serverPlan={toSchemaPlan(plan)} sharedEditor studentUrl={window.location.href} pdfOnly /></div></section>
+         <section className="page-heading student-page-heading"><div className="student-hero"><span className="student-hero-eyebrow">Plan de entrenamiento para</span><h1 className="student-hero-name">{plan.student || "Estudiante"}</h1><p className="student-hero-plan">{plan.name || "Planificación"}</p></div><div className="student-plan-actions"><div className="student-plan-dates"><div className="student-start-date"><span>FECHA DE INICIO</span><strong>{formattedStartDate}</strong></div></div><App initialPlan={plan} serverPlan={toSchemaPlan(plan)} sharedEditor studentUrl={window.location.href} pdfOnly /></div></section>
+         <details className="student-help">
+           <summary><CircleHelp size={15} /> ¿Cómo funciona esta página?</summary>
+           <div className="student-help-body">
+             <p>Esta es tu planificación de entrenamiento. Aquí registras lo que <strong>realmente hiciste</strong> en cada sesión, comparas tus resultados con lo prescrito y llevas un seguimiento semana a semana. Tu entrenador verá automáticamente los cambios.</p>
+             <ul>
+               <li><strong>Registrar tu ejecución:</strong> pulsa cualquier celda de la tabla para anotar las series, repeticiones y carga (fuerza) o el tiempo/distancia e intensidad (cardio o movilidad) que realizaste. Los campos se rellenan con la prescripción para que solo modifiques lo que cambió.</li>
+               <li><strong>Comparar prescrito vs. realizado:</strong> una vez guardado, la celda muestra ambos valores lado a lado (prescrito tachado y realizado resaltado) para que veas tu progresión de un vistazo.</li>
+               <li><strong>Comentar un ejercicio:</strong> en el formulario de edición puedes añadir una nota (por ejemplo, cómo te sentiste o si hubo molestias) que quedará visible junto al ejercicio.</li>
+               <li><strong>Volver a la prescripción:</strong> si te equivocaste o quieres empezar de nuevo, usa «Volver a prescrita» para borrar tu registro de ese ejercicio.</li>
+               <li><strong>Fecha de cada sesión:</strong> bajo cada columna de semana hay una fecha. Púlsala para indicar el día real en que entrenaste esa sesión.</li>
+               <li><strong>Filtrar por sesión o semana:</strong> usa los selectores para concentrarte en una sesión o semana concreta y pulsa «Mostrar todo» para volver a la vista completa.</li>
+               <li><strong>Descargar el plan:</strong> con el botón «Descargar PDF» te llevas una copia imprimible del plan completo.</li>
+             </ul>
+             <p className="student-help-note">Tus cambios se guardan automáticamente al pulsar «Guardar» y solo tú puedes editarlos con tu enlace privado.</p>
+           </div>
+         </details>
          {plan.generalNotes?.trim() && <section className="student-general-notes"><h2>Comentario general</h2><p><LinkifiedText>{plan.generalNotes}</LinkifiedText></p></section>}
          <section className="student-summary-filters" aria-label="Filtros del resumen">
           <label>SESIÓN<select value={selectedSessionId} onChange={(event) => setSelectedSessionId(event.target.value)}><option value="all">Todas las sesiones</option>{sessions.map((session, index) => <option key={session.id} value={String(session.id)}>Sesión {String(index + 1).padStart(2, "0")} · {session.name}</option>)}</select></label>

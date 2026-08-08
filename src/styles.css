@@ -1955,6 +1955,68 @@ nav button:hover,
     text-underline-offset: 2px
 }
 
+.student-help {
+    margin-top: 18px;
+    padding: 0;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden
+}
+
+.student-help > summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 16px;
+    cursor: pointer;
+    list-style: none;
+    color: var(--green);
+    font: 700 13px Manrope
+}
+
+.student-help > summary::-webkit-details-marker {
+    display: none
+}
+
+.student-help[open] > summary {
+    border-bottom: 1px solid var(--line)
+}
+
+.student-help-body {
+    padding: 14px 18px 16px
+}
+
+.student-help-body p {
+    margin: 0 0 10px;
+    color: #59665f;
+    line-height: 1.5
+}
+
+.student-help-body ul {
+    margin: 0 0 12px;
+    padding-left: 18px;
+    color: #59665f;
+    line-height: 1.5
+}
+
+.student-help-body li {
+    margin-bottom: 8px
+}
+
+.student-help-body strong {
+    color: var(--ink)
+}
+
+.student-help-note {
+    margin-bottom: 0 !important;
+    padding: 9px 12px;
+    background: var(--light-green);
+    border-radius: 7px;
+    color: var(--green) !important;
+    font-size: 12px
+}
+
 .linkified-url:focus-visible {
     outline: 2px solid #bd6573;
     outline-offset: 2px;
