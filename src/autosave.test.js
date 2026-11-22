@@ -9,13 +9,13 @@ const bundle = await rolldown({
   input: entry,
   external: (id) => id !== entry,
   transform: { jsx: { runtime: "classic" } },
-  plugins: [{ name: "test-app", transform: (code) => `${code}\nexport { App as TestApp };` }],
+  plugins: [{ name: "test-app", transform: (code) => `${code}\nexport { App as TestApp, ReorderHandle };` }],
 });
 const { output } = await bundle.generate({ format: "cjs" });
 const compiled = output[0].code;
 await bundle.close();
 
-function editor(props = {}, api = {}) {
+function editor(props = {}, api = {}, component = "TestApp") {
   const hooks = [];
   const timers = new Map();
   const requests = [];
@@ -67,10 +67,11 @@ function editor(props = {}, api = {}) {
   const context = vm.createContext({
     exports: {}, require: (name) => modules[name], structuredClone, URLSearchParams,
     localStorage: storage, sessionStorage: storage,
-    document: { getElementById: () => ({}) },
+    document: { getElementById: () => ({}), elementFromPoint: () => api.dropTarget },
     window: {
       location: { pathname: "/", origin: "https://example.com", search: "" },
       history: { replaceState: (...args) => urls.push(args[2]) },
+      innerHeight: 900, scrollBy() {},
       setTimeout: (callback, delay) => { const id = Symbol(); timers.set(id, { callback, delay }); return id; },
       clearTimeout: (id) => timers.delete(id),
     },
@@ -79,18 +80,30 @@ function editor(props = {}, api = {}) {
   const render = () => {
     cursor = 0;
     pendingEffects = [];
-    tree = context.exports.TestApp(props);
+    tree = context.exports[component](props);
     pendingEffects.forEach((effect) => effect());
   };
   const find = (predicate, node = tree) => {
     if (!node || typeof node !== "object") return undefined;
     if (predicate(node)) return node;
-    return (node.props?.children || []).flat(Infinity).map((child) => find(predicate, child)).find(Boolean);
+    return (node.props?.children || []).flat(Infinity).filter(Boolean).map((child) => find(predicate, child)).find(Boolean);
   };
   render();
   return {
     requests, urls, timers, render,
     get plan() { return hooks[0]; },
+    find,
+    move(kind, index, targetIndex) {
+      find((node) => typeof node.type === "function" && node.props.kind === kind && node.props.index === index).props.onMove(index, targetIndex);
+      render();
+    },
+    click(label) {
+      const button = find((node) => node.type === "button" && node.props["aria-label"] === label);
+      assert.ok(button, `Missing button: ${label}`);
+      assert.equal(button.props.disabled, false);
+      button.props.onClick();
+      render();
+    },
     change(name) {
       find((node) => node.type === "input" && node.props.id === "student-profile-input").props.onChange({ target: { value: name } });
       render();
@@ -188,4 +201,116 @@ test("PDF-only rendering never schedules a save", () => {
   const app = editor({ pdfOnly: true });
   assert.equal(app.timers.size, 0);
   assert.equal(app.requests.length, 0);
+});
+
+function reorderPlan() {
+  return {
+    version: 2, name: "Plan", student: "Ana", studentProfile: {},
+    startDate: "2026-11-22", generalNotes: "",
+    weeks: [1, 2].map((number) => ({
+      id: number + 100, number,
+      days: [10, 20, 30].map((id) => ({
+        id, name: `Sesion ${id}`,
+        exercises: [1, 2, 3].map((index) => ({
+          id: id + index, name: `Ejercicio ${id + index}`, type: "strength",
+          sets: `${number + index}`, reps: "10", load: `${number * index} kg`,
+        })),
+      })),
+    })),
+  };
+}
+
+test("session reordering preserves selection, IDs and weekly prescriptions", async () => {
+  const initialPlan = reorderPlan();
+  const app = editor({ initialPlan });
+  app.move("session", 0, 2);
+  for (const [index, week] of app.plan.weeks.entries()) {
+    assert.deepEqual(Array.from(week.days, (day) => day.id), [20, 30, 10]);
+    assert.equal(week.days[2], initialPlan.weeks[index].days[0]);
+  }
+  assert.equal(app.find((node) => node.props?.className === "title-input").props.value, "Sesion 10");
+  await app.save();
+  assert.deepEqual(Array.from(app.requests[0].plan.sessions, (session) => session.id), [20, 30, 10]);
+  app.move("session", 2, 1);
+  assert.deepEqual(Array.from(app.plan.weeks[0].days, (day) => day.id), [20, 10, 30]);
+});
+
+test("exercise reordering affects only its session across all weeks and persists order", async () => {
+  const initialPlan = reorderPlan();
+  const app = editor({ initialPlan });
+  app.move("exercise", 0, 2);
+  for (const [index, week] of app.plan.weeks.entries()) {
+    assert.deepEqual(Array.from(week.days[0].exercises, (exercise) => exercise.id), [12, 13, 11]);
+    assert.equal(week.days[0].exercises[2], initialPlan.weeks[index].days[0].exercises[0]);
+    assert.equal(week.days[1], initialPlan.weeks[index].days[1]);
+  }
+  assert.equal(app.find((node) => node.props?.className === "selected-exercise-name").props.value, "Ejercicio 11");
+  await app.save();
+  const exercises = app.requests[0].plan.sessions[0].exercises;
+  assert.deepEqual(Array.from(exercises, (exercise) => exercise.id), [12, 13, 11]);
+  assert.deepEqual(Array.from(exercises, (exercise) => exercise.order), [1, 2, 3]);
+  assert.deepEqual(Array.from(exercises[2].plan, (item) => item.load), ["1 kg", "2 kg"]);
+  app.move("exercise", 2, 1);
+  assert.deepEqual(Array.from(app.plan.weeks[0].days[0].exercises, (exercise) => exercise.id), [12, 11, 13]);
+});
+
+test("single-item lists disable the drag handle", () => {
+  const app = editor({ kind: "session", index: 0, count: 1, name: "Sesion" }, {}, "ReorderHandle");
+  assert.equal(app.find((node) => node.type === "button").props.disabled, true);
+});
+
+test("reordering a saved plan does not reset student execution", async () => {
+  const original = editor({ initialPlan: reorderPlan() });
+  original.change("Maria");
+  await original.save();
+  const app = editor({
+    initialPlan: original.plan, serverPlan: original.requests[0].plan,
+    sharedEditor: true, prescriberToken: "coach", planId: "plan-1",
+    initialExecution: { "1:10:11": { sets: "4" } },
+  });
+  app.move("session", 0, 1);
+  app.move("exercise", 0, 1);
+  await app.save();
+  assert.deepEqual(app.requests.map(({ method }) => method), ["PUT"]);
+  const session = app.requests[0].plan.sessions.find((item) => item.id === 10);
+  assert.deepEqual(Array.from(session.exercises, (exercise) => exercise.id), [12, 11, 13]);
+});
+
+test("dragging an unselected item preserves the current selection", () => {
+  const app = editor({ initialPlan: reorderPlan() });
+  app.move("session", 2, 0);
+  app.move("exercise", 2, 0);
+  assert.equal(app.find((node) => node.props?.className === "title-input").props.value, "Sesion 10");
+  assert.equal(app.find((node) => node.props?.className === "selected-exercise-name").props.value, "Ejercicio 11");
+});
+
+test("drag handles support keyboard reordering and respect boundaries", () => {
+  for (const [kind, key] of [["session", "ArrowRight"], ["exercise", "ArrowDown"]]) {
+    const moves = [];
+    const app = editor({ kind, index: 0, count: 3, name: "Item", onMove: (...args) => moves.push(args) }, {}, "ReorderHandle");
+    const button = app.find((node) => node.type === "button");
+    button.props.onKeyDown({ key, preventDefault() {} });
+    button.props.onKeyDown({ key: kind === "session" ? "ArrowLeft" : "ArrowUp", preventDefault() {} });
+    assert.deepEqual(moves, [[0, 1]]);
+  }
+});
+
+test("pointer dragging commits only on drop and cancellation leaves order unchanged", () => {
+  const moves = [];
+  const list = {};
+  const target = { parentElement: list, dataset: { reorderKind: "exercise", reorderIndex: "2" }, classList: { add() {}, remove() {} } };
+  const app = editor({ kind: "exercise", index: 0, count: 3, name: "Item", onMove: (...args) => moves.push(args) }, { dropTarget: { closest: () => target } }, "ReorderHandle");
+  const button = app.find((node) => node.type === "button");
+  const start = { button: 0, isPrimary: true, clientX: 10, clientY: 10, pointerId: 1,
+    currentTarget: { closest: () => ({ parentElement: list }), setPointerCapture() {} } };
+  button.props.onPointerDown(start);
+  button.props.onPointerMove({ clientX: 10, clientY: 150 });
+  assert.deepEqual(moves, []);
+  button.props.onPointerUp();
+  assert.deepEqual(moves, [[0, 2]]);
+  button.props.onPointerDown(start);
+  button.props.onPointerMove({ clientX: 10, clientY: 150 });
+  button.props.onPointerCancel();
+  button.props.onPointerUp();
+  assert.deepEqual(moves, [[0, 2]]);
 });

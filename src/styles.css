@@ -703,6 +703,70 @@ nav button:hover,
     border-right: 1px solid var(--line)
 }
 
+.sortable-session,
+.sortable-exercise {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    border-radius: 7px;
+    flex-shrink: 0;
+}
+
+.sortable-exercise .day-item {
+    min-width: 0;
+    flex: 1;
+}
+
+.session-tabs .reorder-handle,
+.reorder-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 30px;
+    min-width: 30px;
+    padding: 4px;
+    border: 0;
+    color: var(--muted);
+    touch-action: none;
+    user-select: none;
+    cursor: grab;
+}
+
+.reorder-handle.is-dragging {
+    cursor: grabbing;
+    color: var(--green);
+}
+
+.reorder-handle:disabled {
+    opacity: .25;
+    cursor: not-allowed;
+}
+
+.reorder-handle:focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: -2px;
+}
+
+.reorder-drop-target {
+    background: var(--light-green);
+}
+
+.reorder-drop-target::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border: 2px solid var(--green);
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.reorder-hint {
+    margin: 10px 0 0;
+    font-size: 11px;
+    color: var(--muted);
+}
+
 .add-exercise-list {
     display: flex;
     align-items: center;

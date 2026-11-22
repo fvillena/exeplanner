@@ -455,6 +455,68 @@ function PrescriberPlanApp({ data }) {
   return <App initialPlan={plan} serverPlan={data.prescribedPlan} initialExecution={data.execution || {}} sharedEditor studentUrl={studentUrl} prescriberUrl={prescriberUrl} sharedAt={data.sharedAt} prescriberToken={prescriberToken} planId={data.id} />;
 }
 
+function ReorderHandle({ kind, index, count, name, onMove }) {
+  const drag = useRef(null);
+  const [dragging, setDragging] = useState(false);
+  const finish = (commit) => {
+    const current = drag.current;
+    if (!current) return;
+    current.target?.classList.remove("reorder-drop-target");
+    drag.current = null;
+    setDragging(false);
+    if (commit && current.moved && current.targetIndex !== index) onMove(index, current.targetIndex);
+  };
+  useEffect(() => () => drag.current?.target?.classList.remove("reorder-drop-target"), []);
+  return <button
+    type="button"
+    className={`reorder-handle ${dragging ? "is-dragging" : ""}`}
+    aria-label={`Reordenar ${name}`}
+    title="Arrastra para reordenar o usa las teclas de flecha"
+    disabled={count < 2}
+    onClick={(event) => event.stopPropagation()}
+    onPointerDown={(event) => {
+      if (event.button !== 0 || !event.isPrimary) return;
+      const item = event.currentTarget.closest("[data-reorder-kind]");
+      drag.current = { x: event.clientX, y: event.clientY, list: item.parentElement, targetIndex: index, moved: false };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }}
+    onPointerMove={(event) => {
+      const current = drag.current;
+      if (!current) return;
+      if (!current.moved && Math.hypot(event.clientX - current.x, event.clientY - current.y) < 5) return;
+      current.moved = true;
+      setDragging(true);
+      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-reorder-kind]");
+      current.target?.classList.remove("reorder-drop-target");
+      current.target = null;
+      current.targetIndex = index;
+      if (target?.dataset.reorderKind === kind && target.parentElement === current.list) {
+        current.target = target;
+        current.targetIndex = Number(target.dataset.reorderIndex);
+        if (current.targetIndex !== index) target.classList.add("reorder-drop-target");
+      }
+      if (kind === "session") {
+        const bounds = current.list.getBoundingClientRect();
+        if (event.clientX > bounds.right - 30) current.list.scrollBy(20, 0);
+        else if (event.clientX < bounds.left + 30) current.list.scrollBy(-20, 0);
+      }
+      if (event.clientY > window.innerHeight - 40) window.scrollBy(0, 20);
+      else if (event.clientY < 40) window.scrollBy(0, -20);
+    }}
+    onPointerUp={() => finish(true)}
+    onPointerCancel={() => finish(false)}
+    onLostPointerCapture={() => finish(false)}
+    onKeyDown={(event) => {
+      if (event.key === "Escape") { finish(false); return; }
+      const keys = kind === "session" ? ["ArrowLeft", "ArrowRight"] : ["ArrowUp", "ArrowDown"];
+      if (!keys.includes(event.key)) return;
+      event.preventDefault();
+      const targetIndex = index + (event.key === keys[0] ? -1 : 1);
+      if (targetIndex >= 0 && targetIndex < count) onMove(index, targetIndex);
+    }}
+  ><GripVertical size={16} /></button>;
+}
+
 function AppRouter() {
   const planMatch = window.location.pathname.match(/^\/p\/([^/]+)/);
   if (planMatch) return <PlanAccessView token={decodeURIComponent(planMatch[1])} />;
@@ -725,6 +787,35 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
     }));
     setActiveDay((index) => Math.max(0, index - 1));
     setActiveExercise(0);
+  };
+  const moveSession = (sourceIndex, targetIndex) => {
+    if (!day || sourceIndex === targetIndex || targetIndex < 0 || targetIndex >= week.days.length) return;
+    const sessionIds = week.days.map((session) => session.id);
+    sessionIds.splice(targetIndex, 0, sessionIds.splice(sourceIndex, 1)[0]);
+    setPlan((current) => ({
+      ...current,
+      weeks: current.weeks.map((item) => ({
+        ...item,
+        days: sessionIds.map((id) => item.days.find((session) => session.id === id)),
+      })),
+    }));
+    setActiveDay(sessionIds.indexOf(day.id));
+  };
+  const moveExercise = (sourceIndex, targetIndex) => {
+    if (!selectedExercise || sourceIndex === targetIndex || targetIndex < 0 || targetIndex >= day.exercises.length) return;
+    const exerciseIds = day.exercises.map((exercise) => exercise.id);
+    exerciseIds.splice(targetIndex, 0, exerciseIds.splice(sourceIndex, 1)[0]);
+    setPlan((current) => ({
+      ...current,
+      weeks: current.weeks.map((item) => ({
+        ...item,
+        days: item.days.map((session) => session.id !== day.id ? session : {
+          ...session,
+          exercises: exerciseIds.map((id) => session.exercises.find((exercise) => exercise.id === id)),
+        }),
+      })),
+    }));
+    setActiveExercise(exerciseIds.indexOf(selectedExercise.id));
   };
   const updateSessionStructure = (patch) =>
     setPlan((p) => ({
@@ -1971,8 +2062,9 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
                 </div>
                 <div className="session-tabs">
                   {week?.days.map((session, index) => (
+                    <div className="sortable-session" key={session.id} data-reorder-kind="session" data-reorder-index={index}>
+                    <ReorderHandle kind="session" index={index} count={week.days.length} name={`sesión ${session.name}`} onMove={moveSession} />
                     <button
-                      key={session.id}
                       onClick={() => {
                         setActiveDay(index);
                         setActiveExercise(0);
@@ -1982,11 +2074,13 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
                       Sesión {String(index + 1).padStart(2, "0")}
                       <small>{session.name}</small>
                     </button>
+                    </div>
                   ))}
                   <button className="add-session-tab" onClick={addDay}>
                     <Plus size={15} /> Sesión
                   </button>
                 </div>
+                <p className="reorder-hint">Arrastra las asas para ordenar sesiones y ejercicios.</p>
                 <div className="session-layout">
                   <div className="exercise-list-panel">
                     <div className="day-list-title">
@@ -2004,8 +2098,9 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
                       </div>
                     </div>
                     {day?.exercises.map((ex, i) => (
+                      <div className="sortable-exercise" key={ex.id} data-reorder-kind="exercise" data-reorder-index={i}>
+                      <ReorderHandle kind="exercise" index={i} count={day.exercises.length} name={`ejercicio ${ex.name}`} onMove={moveExercise} />
                       <button
-                        key={ex.id}
                         className={`day-item ${i === activeExercise ? "day-active" : ""}`}
                         onClick={() => setActiveExercise(i)}
                       >
@@ -2018,6 +2113,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
                         </span>
                         <ChevronRight size={17} />
                       </button>
+                      </div>
                     ))}
                     <button className="add-exercise-list" onClick={addExerciseToSession}>
                       <Plus size={15} /> Añadir ejercicio
