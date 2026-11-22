@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import vm from "node:vm";
 import { rolldown } from "rolldown";
@@ -9,7 +10,7 @@ const bundle = await rolldown({
   input: entry,
   external: (id) => id !== entry,
   transform: { jsx: { runtime: "classic" } },
-  plugins: [{ name: "test-app", transform: (code) => `${code}\nexport { App as TestApp, ReorderHandle };` }],
+  plugins: [{ name: "test-app", transform: (code) => `${code}\nexport { App as TestApp, ReorderHandle, StudentExerciseDescription };` }],
 });
 const { output } = await bundle.generate({ format: "cjs" });
 const compiled = output[0].code;
@@ -313,4 +314,35 @@ test("pointer dragging commits only on drop and cancellation leaves order unchan
   button.props.onPointerCancel();
   button.props.onPointerUp();
   assert.deepEqual(moves, [[0, 2]]);
+});
+
+test("long student descriptions can expand and collapse without losing their links", () => {
+  const example = JSON.parse(readFileSync(new URL("../example2.json", import.meta.url), "utf8"));
+  const description = example.sessions[0].exercises[0].description;
+  assert.ok(description.length > 1500);
+  const app = editor({ description }, {}, "StudentExerciseDescription");
+  const toggle = () => app.find((node) => node.type === "button");
+  const displayed = () => app.find((node) => typeof node.type === "function").props.children[0];
+  assert.equal(toggle().props["aria-expanded"], false);
+  assert.ok(displayed().length <= 183);
+  assert.ok(displayed().endsWith("..."));
+  toggle().props.onClick();
+  app.render();
+  assert.equal(toggle().props["aria-expanded"], true);
+  assert.equal(displayed(), description);
+  assert.ok(displayed().includes("https://www.mayoclinic.org/"));
+  toggle().props.onClick();
+  app.render();
+  assert.equal(toggle().props["aria-expanded"], false);
+  assert.ok(displayed().length <= 183);
+});
+
+test("short and empty descriptions do not offer expansion", () => {
+  for (const description of [undefined, "", "Una descripcion breve.", "a".repeat(180)]) {
+    const app = editor({ description }, {}, "StudentExerciseDescription");
+    assert.equal(app.find((node) => node.type === "button"), undefined);
+    if (description) {
+      assert.equal(app.find((node) => typeof node.type === "function").props.children[0], description);
+    }
+  }
 });

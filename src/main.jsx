@@ -268,6 +268,18 @@ function LinkifiedText({ children }) {
   );
 }
 
+function StudentExerciseDescription({ description }) {
+  const [expanded, setExpanded] = useState(false);
+  const text = description || "";
+  const isLong = text.length > 180;
+  const preview = isLong ? `${text.slice(0, 180).replace(/\s+\S*$/, "").trimEnd()}...` : text;
+  if (!text) return null;
+  return <small className="comparison-exercise-description">
+    <LinkifiedText>{expanded ? text : preview}</LinkifiedText>
+    {isLong && <button type="button" className="description-toggle" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? "Ver menos" : "Ver descripción completa"}</button>}
+  </small>;
+}
+
 function SummaryExerciseValues({ exercise }) {
   return <>
     {sharedExerciseDetails(exercise).map((detail, index) =>
@@ -390,7 +402,7 @@ function StudentSummaryView({ plan, initialExecution, initialSessionDates, share
           {(selectedSessionId !== "all" || selectedWeekNumber !== "all") && <button className="summary-filter-reset" onClick={() => { setSelectedSessionId("all"); setSelectedWeekNumber("all"); }}>Mostrar todo</button>}
         </section>
       <section className={`comparison-section ${selectedWeekNumber !== "all" ? "single-week-summary" : ""}`}><div className="comparison-heading"><div><h2>Resumen por semanas</h2><p>Compara la progresión de cada ejercicio a lo largo del plan.</p></div></div>
-      {sessions.filter((session) => selectedSessionId === "all" || String(session.id) === selectedSessionId).map((session, sessionIndex) => <section className="comparison-card shared-summary-card" key={session.id}><div className="comparison-title"><span className="comparison-day-number">{String(sessions.indexOf(session) + 1).padStart(2, "0")}</span><h3>{session.name || `Sesión ${sessions.indexOf(session) + 1}`}</h3></div><div className="comparison-table-wrap"><table className="comparison-table"><thead><tr><th>Ejercicio</th>{plan.weeks.filter((week) => selectedWeekNumber === "all" || String(week.number) === selectedWeekNumber).map((week) => { const dateKey = `${week.number}:${session.id}`; const isEditingDate = editingSessionDate === dateKey; return <th key={week.id}>Semana {String(week.number).padStart(2, "0")}<div className="student-session-date">{isEditingDate ? <div className="session-date-editor"><input lang="es-CL" aria-label="Fecha de sesión" type="date" value={sessionDateDraft} onChange={(event) => setSessionDateDraft(event.target.value)} /><button type="button" onClick={() => saveSessionDate(week.number, session.id, sessionDateDraft)}>Guardar</button><button type="button" onClick={() => setEditingSessionDate("")}>Cancelar</button></div> : <button type="button" className="session-date-display" onClick={() => { setEditingSessionDate(dateKey); setSessionDateDraft(sessionDates[dateKey] || ""); }}>{formatChileDate(sessionDates[dateKey])}</button>}</div></th>; })}</tr></thead><tbody>{session.exercises.map((baseExercise) => <tr key={baseExercise.id}><th><span>{baseExercise.name}</span>{baseExercise.description && <small className="comparison-exercise-description"><LinkifiedText>{baseExercise.description}</LinkifiedText></small>}</th>{plan.weeks.filter((week) => selectedWeekNumber === "all" || String(week.number) === selectedWeekNumber).map((week) => {
+      {sessions.filter((session) => selectedSessionId === "all" || String(session.id) === selectedSessionId).map((session, sessionIndex) => <section className="comparison-card shared-summary-card" key={session.id}><div className="comparison-title"><span className="comparison-day-number">{String(sessions.indexOf(session) + 1).padStart(2, "0")}</span><h3>{session.name || `Sesión ${sessions.indexOf(session) + 1}`}</h3></div><div className="comparison-table-wrap"><table className="comparison-table"><thead><tr><th>Ejercicio</th>{plan.weeks.filter((week) => selectedWeekNumber === "all" || String(week.number) === selectedWeekNumber).map((week) => { const dateKey = `${week.number}:${session.id}`; const isEditingDate = editingSessionDate === dateKey; return <th key={week.id}>Semana {String(week.number).padStart(2, "0")}<div className="student-session-date">{isEditingDate ? <div className="session-date-editor"><input lang="es-CL" aria-label="Fecha de sesión" type="date" value={sessionDateDraft} onChange={(event) => setSessionDateDraft(event.target.value)} /><button type="button" onClick={() => saveSessionDate(week.number, session.id, sessionDateDraft)}>Guardar</button><button type="button" onClick={() => setEditingSessionDate("")}>Cancelar</button></div> : <button type="button" className="session-date-display" onClick={() => { setEditingSessionDate(dateKey); setSessionDateDraft(sessionDates[dateKey] || ""); }}>{formatChileDate(sessionDates[dateKey])}</button>}</div></th>; })}</tr></thead><tbody>{session.exercises.map((baseExercise) => <tr key={baseExercise.id}><th><span>{baseExercise.name}</span><StudentExerciseDescription description={baseExercise.description} /></th>{plan.weeks.filter((week) => selectedWeekNumber === "all" || String(week.number) === selectedWeekNumber).map((week) => {
         const exercise = week.days?.[sessionIndex]?.exercises?.find((item) => item.id === baseExercise.id) || baseExercise;
         const key = `${week.number}:${session.id}:${exercise.id}`;
         const actual = execution[key];

@@ -767,6 +767,23 @@ nav button:hover,
     color: var(--muted);
 }
 
+.description-toggle {
+    display: block;
+    margin-top: 6px;
+    padding: 4px 0;
+    color: var(--green);
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.description-toggle:focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
+}
+
 .add-exercise-list {
     display: flex;
     align-items: center;
