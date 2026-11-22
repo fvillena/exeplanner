@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useEffectEvent, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
@@ -455,11 +455,15 @@ function PrescriberPlanApp({ data }) {
   return <App initialPlan={plan} serverPlan={data.prescribedPlan} initialExecution={data.execution || {}} sharedEditor studentUrl={studentUrl} prescriberUrl={prescriberUrl} sharedAt={data.sharedAt} prescriberToken={prescriberToken} planId={data.id} />;
 }
 
-function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecution = {}, sharedEditor = false, studentUrl = "", prescriberUrl = "", sharedAt = "", prescriberToken = "", planId = "", pdfOnly = false }) {
+function AppRouter() {
   const planMatch = window.location.pathname.match(/^\/p\/([^/]+)/);
-  if (planMatch && !sharedEditor) return <PlanAccessView token={decodeURIComponent(planMatch[1])} />;
+  if (planMatch) return <PlanAccessView token={decodeURIComponent(planMatch[1])} />;
   const studentMatch = window.location.pathname.match(/^\/s\/([^/]+)/);
-  if (studentMatch && !sharedEditor) return <SharedPlanView mode="student" token={decodeURIComponent(studentMatch[1])} />;
+  if (studentMatch) return <SharedPlanView mode="student" token={decodeURIComponent(studentMatch[1])} />;
+  return <App />;
+}
+
+function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecution = {}, sharedEditor = false, studentUrl: providedStudentUrl = "", prescriberUrl: providedPrescriberUrl = "", sharedAt = "", prescriberToken = "", planId = "", pdfOnly = false }) {
   const [plan, setPlan] = useState(() => {
     const storedPlan = !providedPlan && !sharedEditor
       ? sessionStorage.getItem("exeplanner-new-plan")
@@ -487,10 +491,15 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
   const [savedServerPlan, setSavedServerPlan] = useState(serverPlan);
   const [studentExecution, setStudentExecution] = useState(initialExecution);
   const importRef = useRef(null);
-  const hasUnsavedPrescriptionChanges = sharedEditor && savedServerPlan
+  const initialPlanRef = useRef(plan);
+  const savingRef = useRef(false);
+  const failedSaveRef = useRef("");
+  const studentUrl = providedStudentUrl || (shareCredentials ? `${window.location.origin}/s/${encodeURIComponent(shareCredentials.studentToken)}` : "");
+  const prescriberUrl = providedPrescriberUrl || (shareCredentials ? `${window.location.origin}/p/${encodeURIComponent(shareCredentials.prescriberToken)}` : "");
+  const hasUnsavedPrescriptionChanges = savedServerPlan
     ? JSON.stringify(toSchemaPlan(plan)) !== JSON.stringify(savedServerPlan)
     : false;
-  const hasSavedPlan = sharedEditor ? !hasUnsavedPrescriptionChanges : Boolean(shareCredentials);
+  const hasSavedPlan = Boolean(savedServerPlan) && !hasUnsavedPrescriptionChanges;
   const week = plan.weeks[weekIndex];
   const day = week?.days[activeDay];
   const selectedExercise = day?.exercises[activeExercise];
@@ -853,16 +862,17 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
     a.click();
     URL.revokeObjectURL(a.href);
   };
-  const sharePlan = async () => {
+  const sharePlan = async (automatic = false) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    const publishedPlan = toSchemaPlan(plan);
     setShareState({ loading: true, links: null, error: "" });
     try {
       let result;
       if (sharedEditor) {
-        const publishedPlan = toSchemaPlan(plan);
         await updatePrescription(planId, prescriberToken, publishedPlan);
-        // Editar y guardar la prescripción resuelve las sugerencias pendientes
-        // del estudiante para que no reaparezcan después de recargar.
-        await Promise.all(
+        // Only an explicit save resolves pending student suggestions.
+        if (!automatic) await Promise.all(
           Object.keys(studentExecution).map((key) => {
             const [week, session, exercise] = key.split(":").map(Number);
             return resetPrescriberExecution(planId, prescriberToken, {
@@ -872,27 +882,40 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
             });
           }),
         );
-        setStudentExecution({});
-        setSavedServerPlan(publishedPlan);
+        if (!automatic) setStudentExecution({});
         result = { id: planId, prescriberToken, studentToken: new URLSearchParams(window.location.search).get("student") };
       } else if (shareCredentials) {
-        await updatePrescription(shareCredentials.id, shareCredentials.prescriberToken, toSchemaPlan(plan));
+        await updatePrescription(shareCredentials.id, shareCredentials.prescriberToken, publishedPlan);
         result = shareCredentials;
       } else {
-        result = await publishPlan(toSchemaPlan(plan));
+        result = await publishPlan(publishedPlan);
       }
+      failedSaveRef.current = "";
+      setSavedServerPlan(publishedPlan);
       setShareCredentials(result);
       const base = window.location.origin;
        const prescriberUrl = `${base}/p/${encodeURIComponent(result.prescriberToken)}`;
       setShareState((current) => ({ ...current, loading: false, error: "" }));
       if (!sharedEditor) {
-        // La publicación inicial lleva al prescriptor sin mostrar una vista intermedia.
-        window.location.replace(prescriberUrl);
+        // Keep the editor mounted so edits made during publication are not lost.
+        window.history.replaceState(null, "", prescriberUrl);
       }
     } catch (error) {
+      failedSaveRef.current = JSON.stringify(publishedPlan);
       setShareState({ loading: false, links: null, error: error.message });
+    } finally {
+      savingRef.current = false;
     }
   };
+  const autoSavePlan = useEffectEvent(() => sharePlan(true));
+  useEffect(() => {
+    if (pdfOnly || shareState.loading) return;
+    if (!savedServerPlan && plan === initialPlanRef.current) return;
+    const snapshot = JSON.stringify(toSchemaPlan(plan));
+    if (snapshot === JSON.stringify(savedServerPlan) || snapshot === failedSaveRef.current) return;
+    const timeout = window.setTimeout(() => autoSavePlan(), 800);
+    return () => window.clearTimeout(timeout);
+  }, [plan, savedServerPlan, shareState.loading, pdfOnly]);
   const resolveStudentChange = async (week, session, exercise, action) => {
     const key = `${week}:${session}:${exercise}`;
     const actual = studentExecution[key];
@@ -1595,11 +1618,12 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
                 <FileText size={16} /> Descargar PDF
               </button>
             )}
-            {(!sharedEditor || hasUnsavedPrescriptionChanges) && (
-              <button className="dark-btn" onClick={sharePlan} disabled={shareState.loading}>
+            {(!hasSavedPlan || shareState.loading) && (
+              <button className="dark-btn" onClick={() => sharePlan()} disabled={shareState.loading}>
                 <Copy size={16} /> {shareState.loading ? "Guardando..." : "Guardar"}
               </button>
             )}
+            {hasSavedPlan && !shareState.loading && <span role="status">Todos los cambios guardados</span>}
           </div>
         </header>
         <div className="page-wrap">
@@ -2484,4 +2508,4 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(<AppRouter />);
