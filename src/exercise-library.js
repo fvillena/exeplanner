@@ -1,7 +1,7 @@
 export const libraryLicenseUrl = new URL("./data/exercises.LICENSE.txt?no-inline", import.meta.url).href;
 const catalogUrl = new URL("./data/exercises.json", import.meta.url).href;
 let catalogPromise;
-const mediaBaseUrl = "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/7455efae41b330c265e7cd4b78dfa848e7ce5ebd/";
+const mediaBaseUrl = "/exercise-media/";
 export const exerciseGifUrl = (record) => /^videos\/[A-Za-z0-9_-]+\.gif$/.test(record.gif_path || "")
   ? `${mediaBaseUrl}${record.gif_path}` : "";
 

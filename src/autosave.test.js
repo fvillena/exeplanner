@@ -544,7 +544,9 @@ test("catalog is complete and contains Spanish instructions and safe GIF referen
     assert.ok(Object.values(record).every((value) => typeof value === "string" && value.trim()));
     assert.match(record.id, /^\d{4}$/);
     assert.match(record.gif_path, /^videos\/[A-Za-z0-9_-]+\.gif$/);
-    assert.ok(exerciseLibrary.exerciseGifUrl(record).includes("/7455efae41b330c265e7cd4b78dfa848e7ce5ebd/videos/"));
+    assert.equal(exerciseLibrary.exerciseGifUrl(record), `/exercise-media/${record.gif_path}`);
+    const gif = readFileSync(new URL(`../public/exercise-media/${record.gif_path}`, import.meta.url));
+    assert.match(gif.subarray(0, 6).toString("ascii"), /^GIF8[79]a$/);
   }
   const license = readFileSync(new URL("./data/exercises.LICENSE.txt", import.meta.url), "utf8");
   assert.ok(license.includes("MIT License") && license.includes("MEDIA EXCEPTION"));

@@ -624,7 +624,7 @@ function ExerciseLibrary({ sessionName, onAdd, onClose, modal = false }) {
       <span>{page + 1} / {pageCount}</span>
       <button type="button" disabled={page + 1 >= pageCount} onClick={() => changePage(page + 1)}>Siguiente</button>
     </nav>}
-    <footer className="library-attribution">Nombres originales en inglés; instrucciones en español cuando están disponibles. Datos de <a href="https://github.com/hasaneyldrm/exercises-dataset" target="_blank" rel="noreferrer">Exercises Dataset</a> · <a href={libraryLicenseUrl} target="_blank" rel="noreferrer">Licencia de textos y condiciones de los medios</a>. Los GIF se cargan desde GitHub al acercarse al área visible. © Gym visual — <a href="https://gymvisual.com/" target="_blank" rel="noreferrer">https://gymvisual.com/</a>. Los medios requieren licencia propia y no están cubiertos por MIT.</footer>
+    <footer className="library-attribution">Nombres originales en inglés; instrucciones en español cuando están disponibles. Datos de <a href="https://github.com/hasaneyldrm/exercises-dataset" target="_blank" rel="noreferrer">Exercises Dataset</a> · <a href={libraryLicenseUrl} target="_blank" rel="noreferrer">Licencia de textos y condiciones de los medios</a>. Los GIF se sirven desde esta aplicación y se cargan al acercarse al área visible. © Gym visual — <a href="https://gymvisual.com/" target="_blank" rel="noreferrer">https://gymvisual.com/</a>. Los medios requieren licencia propia y no están cubiertos por MIT.</footer>
   </>;
   return modal
     ? <dialog ref={dialogRef} className="exercise-library library-dialog" aria-labelledby="exercise-library-title" onCancel={(event) => { event.preventDefault(); onClose(); }}>{content}</dialog>

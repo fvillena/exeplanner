@@ -6,7 +6,7 @@
 - Frontend React 19 + Vite. `src/main.jsx` contiene el editor, las vistas compartidas, la conversion de datos y la exportacion PDF con enlace y QR del estudiante.
 - `src/styles.css` contiene los estilos. Mantener el lenguaje visual existente y la adaptacion a movil.
 - `src/api.js` centraliza las peticiones a rutas `/api/` del mismo origen.
-- `src/exercise-library.js` carga bajo demanda el catalogo local `src/data/exercises.json`. Su revision y licencia estan en `src/data/exercises-source.json` y `src/data/exercises.LICENSE.txt`. Los GIF de Gym visual aparecen en las tarjetas con carga diferida nativa (`loading="lazy"`) desde la revision fijada de GitHub y atribucion. Requieren licencia propia, no estan cubiertos por MIT. No se copian a los planes ni al PDF.
+- `src/exercise-library.js` carga bajo demanda el catalogo local `src/data/exercises.json`. Su revision y licencia estan en `src/data/exercises-source.json` y `src/data/exercises.LICENSE.txt`. Los GIF de Gym visual se guardan en `public/exercise-media/videos` y se sirven desde `/exercise-media/videos/`, sin peticiones a GitHub. Aparecen con carga diferida nativa (`loading="lazy"`) y atribucion. Requieren licencia propia, no estan cubiertos por MIT. No se copian a los planes ni al PDF. El Dockerfile del frontend debe copiar `public` antes de compilar.
 - Backend Express + MongoDB en `server/index.js`; configura la conexion mediante variables de entorno.
 - Rutas: `/` crea una planificacion; `/p/:token` permite editar como prescriptor; `/s/:token` permite consultar y registrar la ejecucion como estudiante.
 - `example.json` y `example2.json` son planes importables. `example2.json` incluye una descripcion extensa en "Sentadilla a caja" para probar el resumen expandible.
