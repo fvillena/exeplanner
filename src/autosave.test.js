@@ -4,13 +4,14 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import vm from "node:vm";
 import { rolldown } from "rolldown";
+import * as exerciseLibrary from "./exercise-library.js";
 
 const entry = fileURLToPath(new URL("./main.jsx", import.meta.url));
 const bundle = await rolldown({
   input: entry,
   external: (id) => id !== entry,
   transform: { jsx: { runtime: "classic" } },
-  plugins: [{ name: "test-app", transform: (code) => `${code}\nexport { App as TestApp, ReorderHandle, StudentExerciseDescription };` }],
+   plugins: [{ name: "test-app", transform: (code) => `${code}\nexport { App as TestApp, ReorderHandle, StudentExerciseDescription, ExerciseLibrary, ExerciseAnimation };` }],
 });
 const { output } = await bundle.generate({ format: "cjs" });
 const compiled = output[0].code;
@@ -52,7 +53,8 @@ function editor(props = {}, api = {}, component = "TestApp") {
   const modules = {
     react,
     "react-dom/client": { createRoot: () => ({ render() {} }) },
-    jspdf: {}, qrcode: {}, "lucide-react": {}, "./styles.css": {},
+     jspdf: {}, qrcode: {}, "lucide-react": {}, "./styles.css": {},
+     "./exercise-library.js": { ...exerciseLibrary, loadExerciseLibrary: api.loadExerciseLibrary || exerciseLibrary.loadExerciseLibrary },
     "./api": {
       publishPlan: async (plan) => {
         requests.push({ method: "POST", plan });
@@ -344,5 +346,261 @@ test("short and empty descriptions do not offer expansion", () => {
     if (description) {
       assert.equal(app.find((node) => typeof node.type === "function").props.children[0], description);
     }
+  }
+});
+
+test("library open and cancellation leave the plan untouched", async () => {
+  const app = editor();
+  const before = app.plan;
+  app.find((node) => node.type === "button" && node.props.children.includes(" Añadir desde biblioteca")).props.onClick();
+  app.render();
+  const library = app.find((node) => typeof node.type === "function" && node.props.modal === true);
+  assert.ok(library.props.modal);
+  library.props.onClose();
+  app.render();
+  assert.equal(app.plan, before);
+  await app.save();
+  assert.equal(app.requests.length, 0);
+});
+
+test("library adds independent editable copies with local IDs across weeks and saves normally", async () => {
+  const initialPlan = reorderPlan();
+  const app = editor({ initialPlan });
+  const record = { id: "0011", name: "Running", description: "Corre de forma controlada.", category: "cardio", gif_path: "videos/0011-example.gif" };
+  const add = () => {
+    app.find((node) => node.type === "button" && node.props.children.includes(" Añadir desde biblioteca")).props.onClick();
+    app.render();
+    app.find((node) => typeof node.type === "function" && node.props.modal === true).props.onAdd(record);
+    app.render();
+  };
+  add();
+  const firstId = app.plan.weeks[0].days[0].exercises[3].id;
+  assert.ok(Number.isInteger(firstId) && firstId > 102);
+  assert.equal(app.plan.weeks[1].days[0].exercises[3].id, firstId);
+  assert.notEqual(app.plan.weeks[0].days[0].exercises[3], app.plan.weeks[1].days[0].exercises[3]);
+  for (const [index, week] of app.plan.weeks.entries()) {
+    assert.equal(week.days[1], initialPlan.weeks[index].days[1]);
+    assert.equal(week.days[0].exercises[0], initialPlan.weeks[index].days[0].exercises[0]);
+    assert.equal(week.days[0].exercises[3].type, "cardio");
+    assert.equal(week.days[0].exercises[3].sets, "");
+  }
+  add();
+  assert.notEqual(app.plan.weeks[0].days[0].exercises[4].id, firstId);
+  assert.equal(app.requests.length, 0);
+  assert.ok([...app.timers.values()].some(({ delay }) => delay === 800));
+  app.find((node) => node.type === "input" && node.props.className === "selected-exercise-name").props.onChange({ target: { value: "Carrera" } });
+  app.render();
+  await app.save();
+  assert.deepEqual(app.requests.map(({ method }) => method), ["POST"]);
+  const saved = app.requests[0].plan.sessions[0].exercises[4];
+  assert.equal(saved.name, "Carrera");
+  assert.equal(saved.description, record.description);
+  assert.equal(saved.type, "cardio");
+  assert.equal(saved.gif_path, undefined);
+  assert.equal(saved.plan.length, 2);
+});
+
+test("manual exercise creation still uses defaults rather than the click event", () => {
+  const app = editor();
+  app.find((node) => node.type === "button" && node.props.children.includes(" Añadir ejercicio")).props.onClick({ type: "click" });
+  app.render();
+  assert.equal(app.plan.weeks[0].days[0].exercises[1].name, "Nuevo ejercicio");
+  assert.equal(app.plan.weeks[0].days[0].exercises[1].type, "strength");
+});
+
+test("library filtering handles accents, Spanish instructions and combined filters", () => {
+  const records = [
+    { id: "1", name: "Barbell curl", description: "Flexión de brazos", category: "upper arms", equipment: "barbell", target: "biceps" },
+    { id: "2", name: "Running", description: "Corre", category: "cardio", equipment: "body weight", target: "cardio" },
+  ];
+  assert.equal(exerciseLibrary.filterLibrary(records, "FLEXION BARRA", "upper arms", "barbell")[0], records[0]);
+  assert.equal(exerciseLibrary.filterLibrary(records, "running", "", "")[0], records[1]);
+  assert.equal(exerciseLibrary.filterLibrary(records, "", "cardio", "barbell").length, 0);
+  assert.equal(exerciseLibrary.libraryLabel("unknown"), "unknown");
+});
+
+test("target filter includes glutes, combines filters and clears without changing the plan", async () => {
+  const records = JSON.parse(readFileSync(new URL("./data/exercises.json", import.meta.url), "utf8"));
+  const glutes = exerciseLibrary.filterLibrary(records, "", "", "", "glutes");
+  assert.ok(glutes.length > 30);
+  assert.ok(glutes.every((record) => record.target === "glutes"));
+  const searchResults = exerciseLibrary.filterLibrary(records, "GLUTEOS", "", "");
+  assert.ok(glutes.every((record) => searchResults.includes(record)));
+  assert.ok(exerciseLibrary.filterLibrary(records, "", "upper arms", "", "glutes").length === 0);
+  const app = editor({ sessionName: "Sesión", onAdd() { assert.fail("Filtering must not add exercises"); } }, {
+    loadExerciseLibrary: async () => records,
+  }, "ExerciseLibrary");
+  await app.flush();
+  assert.ok(app.find((node) => node.type === "option" && node.props.value === "glutes" && node.props.children.includes("Glúteos")));
+  const targetSelect = () => app.find((node) => node.type === "label" && node.props.children.includes("Músculo objetivo")).props.children.find((node) => node?.type === "select");
+  app.find((node) => node.type === "button" && node.props.children.includes("Siguiente")).props.onClick();
+  app.render();
+  targetSelect().props.onChange({ target: { value: "glutes" } });
+  app.render();
+  assert.equal(targetSelect().props.value, "glutes");
+  assert.equal(app.find((node) => node.type === "button" && node.props.children.includes("Anterior")).props.disabled, true);
+  app.find((node) => node.type === "button" && node.props.children.includes("Limpiar filtros")).props.onClick();
+  app.render();
+  assert.equal(targetSelect().props.value, "");
+  assert.equal(app.requests.length, 0);
+});
+
+test("body region selector includes all 10 catalog categories and preserves options when combined", async () => {
+  const records = JSON.parse(readFileSync(new URL("./data/exercises.json", import.meta.url), "utf8"));
+  const categories = [...new Set(records.map((record) => record.category))].sort();
+  assert.deepEqual(categories, ["back", "cardio", "chest", "lower arms", "lower legs", "neck", "shoulders", "upper arms", "upper legs", "waist"]);
+  const app = editor({ sessionName: "Sesión", onAdd() { assert.fail("Filtering must not add exercises"); } }, {
+    loadExerciseLibrary: async () => records,
+  }, "ExerciseLibrary");
+  await app.flush();
+  const select = (label) => app.find((node) => node.type === "label" && node.props.children.includes(label)).props.children.find((node) => node?.type === "select");
+  for (const category of categories) {
+    const label = exerciseLibrary.libraryLabel(category);
+    assert.notEqual(label, category);
+    assert.ok(app.find((node) => node.type === "option" && node.props.value === category && node.props.children.includes(label), select("Zona corporal")));
+    const expected = records.filter((record) => record.category === category);
+    assert.deepEqual(exerciseLibrary.filterLibrary(records, "", category, ""), expected);
+    const sample = expected[0];
+    const combined = exerciseLibrary.filterLibrary(records, "", category, sample.equipment, sample.target);
+    assert.ok(combined.includes(sample));
+    assert.ok(combined.every((record) => record.category === category && record.equipment === sample.equipment && record.target === sample.target));
+  }
+  select("Músculo objetivo").props.onChange({ target: { value: "glutes" } });
+  app.render();
+  for (const category of categories) {
+    assert.ok(app.find((node) => node.type === "option" && node.props.value === category, select("Zona corporal")));
+  }
+  select("Zona corporal").props.onChange({ target: { value: "upper legs" } });
+  app.render();
+  assert.equal(select("Zona corporal").props.value, "upper legs");
+  app.find((node) => node.type === "button" && node.props.children.includes("Limpiar filtros")).props.onClick();
+  app.render();
+  assert.equal(select("Zona corporal").props.value, "");
+  assert.equal(select("Músculo objetivo").props.value, "");
+  assert.equal(app.requests.length, 0);
+});
+
+test("equipment selector includes all 28 catalog values, translated and filterable", async () => {
+  const records = JSON.parse(readFileSync(new URL("./data/exercises.json", import.meta.url), "utf8"));
+  const values = [...new Set(records.map((record) => record.equipment))];
+  assert.equal(values.length, 28);
+  const app = editor({ sessionName: "Sesión", onAdd() {} }, {
+    loadExerciseLibrary: async () => records,
+  }, "ExerciseLibrary");
+  await app.flush();
+  const select = () => app.find((node) => node.type === "label" && node.props.children.includes("Equipamiento")).props.children.find((node) => node?.type === "select");
+  for (const equipment of values) {
+    const label = exerciseLibrary.libraryLabel(equipment);
+    assert.notEqual(label, equipment);
+    assert.ok(app.find((node) => node.type === "option" && node.props.value === equipment && node.props.children.includes(label), select()));
+    const expected = records.filter((record) => record.equipment === equipment);
+    assert.deepEqual(exerciseLibrary.filterLibrary(records, "", "", equipment), expected);
+    const sample = expected[0];
+    const combined = exerciseLibrary.filterLibrary(records, "", sample.category, equipment, sample.target);
+    assert.ok(combined.includes(sample));
+    assert.ok(combined.every((record) => record.category === sample.category && record.equipment === equipment && record.target === sample.target));
+  }
+  select().props.onChange({ target: { value: "kettlebell" } });
+  app.render();
+  assert.equal(select().props.value, "kettlebell");
+  app.find((node) => node.type === "button" && node.props.children.includes("Limpiar filtros")).props.onClick();
+  app.render();
+  assert.equal(select().props.value, "");
+});
+
+test("library load failure offers a working retry and filters reset pagination", async () => {
+  let calls = 0;
+  const records = Array.from({ length: 31 }, (_, index) => ({ id: `${index}`, name: `Curl ${index}`, description: "Flexión", category: "upper arms", equipment: "barbell", target: "biceps" }));
+  const app = editor({ sessionName: "Sesión 1", onAdd() {} }, {
+    loadExerciseLibrary: async () => { if (++calls === 1) throw new Error("offline"); return records; },
+  }, "ExerciseLibrary");
+  await app.flush();
+  assert.ok(app.find((node) => node.props?.role === "alert"));
+  app.find((node) => node.type === "button" && node.props.children.includes("Reintentar")).props.onClick();
+  app.render();
+  await app.flush();
+  assert.equal(calls, 2);
+  assert.equal(app.find((node) => node.props?.role === "alert"), undefined);
+  const scrolls = [];
+  app.find((node) => node.props?.className === "library-heading").props.ref.current = {
+    scrollIntoView: (options) => scrolls.push(options),
+  };
+  app.find((node) => node.type === "button" && node.props.children.includes("Siguiente")).props.onClick();
+  app.render();
+  assert.equal(scrolls.length, 1);
+  assert.equal(scrolls[0].block, "start");
+  assert.ok(app.find((node) => node.type === "h3" && node.props.children.includes("Curl 30")));
+  app.find((node) => node.type === "input").props.onChange({ target: { value: "Curl 0" } });
+  app.render();
+  assert.ok(app.find((node) => node.type === "h3" && node.props.children.includes("Curl 0")));
+});
+
+test("catalog is complete and contains Spanish instructions and safe GIF references", () => {
+  const records = JSON.parse(readFileSync(new URL("./data/exercises.json", import.meta.url), "utf8"));
+  assert.equal(records.length, 1324);
+  assert.equal(new Set(records.map(({ id }) => id)).size, records.length);
+  for (const record of records) {
+    assert.deepEqual(Object.keys(record).sort(), ["category", "description", "equipment", "gif_path", "id", "name", "target"]);
+    assert.ok(Object.values(record).every((value) => typeof value === "string" && value.trim()));
+    assert.match(record.id, /^\d{4}$/);
+    assert.match(record.gif_path, /^videos\/[A-Za-z0-9_-]+\.gif$/);
+    assert.ok(exerciseLibrary.exerciseGifUrl(record).includes("/7455efae41b330c265e7cd4b78dfa848e7ce5ebd/videos/"));
+  }
+  const license = readFileSync(new URL("./data/exercises.LICENSE.txt", import.meta.url), "utf8");
+  assert.ok(license.includes("MIT License") && license.includes("MEDIA EXCEPTION"));
+});
+
+test("GIF preview is always shown with native lazy loading and handles retry", () => {
+  const record = { name: "Curl", gif_path: "videos/0001-example.gif" };
+  const app = editor({ record }, {}, "ExerciseAnimation");
+  const image = app.find((node) => node.type === "img");
+  assert.equal(image.props.src, exerciseLibrary.exerciseGifUrl(record));
+  assert.equal(image.props.loading, "lazy");
+  assert.equal(image.props.decoding, "async");
+  assert.equal(image.props.width, "180");
+  assert.equal(image.props.height, "180");
+  assert.equal(app.find((node) => node.type === "button"), undefined);
+  assert.ok(app.find((node) => node.type === "figcaption"));
+  image.props.onError();
+  app.render();
+  assert.equal(app.find((node) => node.type === "img"), undefined);
+  assert.ok(app.find((node) => node.props?.role === "status"));
+  app.find((node) => node.type === "button" && node.props.children.includes("Reintentar animación")).props.onClick();
+  app.render();
+  assert.ok(app.find((node) => node.type === "img"));
+});
+
+test("GIF preview rejects missing, external and traversal paths", () => {
+  for (const gif_path of [undefined, "https://other.example/a.gif", "videos/../a.gif", "videos/a.svg"]) {
+    const record = { name: "Curl", gif_path };
+    assert.equal(exerciseLibrary.exerciseGifUrl(record), "");
+    const app = editor({ record }, {}, "ExerciseAnimation");
+    assert.equal(app.find((node) => node.type === "img"), undefined);
+    assert.equal(app.find((node) => node.type === "button"), undefined);
+  }
+});
+
+test("catalog loader is lazy, shares requests, retries failures and caches success", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  const catalog = [{ id: "1", name: "Curl", category: "upper arms", equipment: "barbell", target: "biceps", description: "Flexiona los brazos." }];
+  try {
+    globalThis.fetch = async () => {
+      calls++;
+      if (calls === 1) return { ok: false };
+      if (calls === 2) return { ok: true, json: async () => ({ invalid: true }) };
+      return { ok: true, json: async () => catalog };
+    };
+    const library = await import(`./exercise-library.js?loader-test`);
+    assert.equal(calls, 0);
+    const first = library.loadExerciseLibrary();
+    assert.equal(first, library.loadExerciseLibrary());
+    await assert.rejects(first, /cargar/);
+    await assert.rejects(library.loadExerciseLibrary(), /formato/);
+    assert.equal(await library.loadExerciseLibrary(), catalog);
+    assert.equal(await library.loadExerciseLibrary(), catalog);
+    assert.equal(calls, 3);
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });

@@ -1,0 +1,4 @@
+- [x] Cuando se crea una nueva planificación, guardarla automáticamente cuando se realice un cambio en la misma.
+- [x] Permitir reordenar las sesiones y los ejercicios dentro de las sesiones.
+- [x] En la vista de estudiante cuando la descripción del ejercicio es muy larga, mostrar un resumen y permitir expandir para ver la descripción completa.
+- [x] Implementar la biblioteca de ejercicios https://github.com/hasaneyldrm/exercises-dataset

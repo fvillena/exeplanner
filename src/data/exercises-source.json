@@ -1,0 +1,36 @@
+{
+  "repo": "https://github.com/hasaneyldrm/exercises-dataset",
+  "revision": "7455efae41b330c265e7cd4b78dfa848e7ce5ebd",
+  "date": "2026-11-22T15:27:09.111Z",
+  "source": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/7455efae41b330c265e7cd4b78dfa848e7ce5ebd/data/exercises.json",
+  "license": {
+    "source": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/7455efae41b330c265e7cd4b78dfa848e7ce5ebd/LICENSE",
+    "file": "exercises.LICENSE.txt"
+  },
+  "fields": [
+    "id",
+    "name",
+    "category",
+    "equipment",
+    "target",
+    "description",
+    "gif_path"
+  ],
+  "language": {
+    "description": "es",
+    "fallback": "en",
+    "transformation": "instructions.es.trim() || instructions.en.trim()",
+    "otherFields": "Unchanged from source (English labels)"
+  },
+  "excluded": "All fields other than the seven listed, including multilingual instruction maps and media files (only relative GIF references are retained)",
+  "sha256": {
+    "source": "656634224b8977b99a6d765470ee123260d4979715eaa4e7c0b7c8bb0d79f93d",
+    "dataset": "d33e35bac5ca3e96f3be815e6cd93c841b29b6b6e8b9b9c028204c62c48ac947",
+    "license": "99230e0c2e74c54386e31e7282fc4d939ca14942df542b706fcd9fa71c3187fa"
+  },
+  "media": {
+    "baseUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/7455efae41b330c265e7cd4b78dfa848e7ce5ebd/",
+    "attribution": "© Gym visual — https://gymvisual.com/",
+    "license": "GIF media are not covered by the dataset MIT text license; a separate license from Gym visual is required."
+  }
+}

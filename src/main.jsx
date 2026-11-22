@@ -33,6 +33,7 @@ import {
   UserRound,
 } from "lucide-react";
 import "./styles.css";
+import { loadExerciseLibrary, filterLibrary, libraryLabel, libraryLicenseUrl, exerciseGifUrl } from "./exercise-library.js";
 
 // Persistencia desactivada temporalmente. Para reactivarla, descomenta los bloques marcados.
 const STORAGE_KEY = "exeplanner-plan-v2";
@@ -537,6 +538,99 @@ function AppRouter() {
   return <App />;
 }
 
+function ExerciseAnimation({ record }) {
+  const [failed, setFailed] = useState(false);
+  const url = exerciseGifUrl(record);
+  if (!url) return null;
+  return <div className="library-animation">
+    <figure>
+      {failed ? <div role="status"><p>No se pudo cargar la animación.</p><button type="button" onClick={() => setFailed(false)}>Reintentar animación</button></div>
+        : <img src={url} alt={`Demostración de ${record.name}`} width="180" height="180" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />}
+      <figcaption>© Gym visual — <a href="https://gymvisual.com/" target="_blank" rel="noreferrer">https://gymvisual.com/</a></figcaption>
+    </figure>
+  </div>;
+}
+
+function ExerciseLibrary({ sessionName, onAdd, onClose, modal = false }) {
+  const [records, setRecords] = useState(null);
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("");
+  const [equipment, setEquipment] = useState("");
+  const [target, setTarget] = useState("");
+  const [page, setPage] = useState(0);
+  const dialogRef = useRef(null);
+  const searchRef = useRef(null);
+  const headingRef = useRef(null);
+  const changePage = (nextPage) => {
+    setPage(nextPage);
+    headingRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+  };
+  useEffect(() => {
+    let cancelled = false;
+    setError("");
+    loadExerciseLibrary().then((data) => { if (!cancelled) setRecords(data); })
+      .catch(() => { if (!cancelled) setError("No se pudo cargar la biblioteca. Inténtalo de nuevo."); });
+    return () => { cancelled = true; };
+  }, [attempt]);
+  useEffect(() => {
+    const previousFocus = document.activeElement;
+    const dialog = dialogRef.current;
+    if (modal) dialog?.showModal();
+    searchRef.current?.focus();
+    return () => {
+      if (modal) dialog?.close();
+      previousFocus?.focus?.();
+    };
+  }, [modal]);
+  const filtered = records ? filterLibrary(records, query, category, equipment, target) : [];
+  const pageCount = Math.max(1, Math.ceil(filtered.length / 30));
+  const options = (field) => [...new Set((records || []).map((record) => record[field]))]
+    .sort((a, b) => libraryLabel(a).localeCompare(libraryLabel(b), "es"));
+  const content = <>
+    <header ref={headingRef} className="library-heading">
+      <div><span className="field-kicker">CATÁLOGO DE EJERCICIOS</span><h2 id="exercise-library-title">Biblioteca de ejercicios</h2>
+        <p>Se añadirá a <strong>{sessionName}</strong> en todas las semanas. Podrás editarlo después.</p></div>
+      {onClose && <button type="button" className="library-close" onClick={onClose}>Cerrar biblioteca</button>}
+    </header>
+    <div className="library-filters">
+      <label>Buscar ejercicio<input ref={searchRef} type="search" value={query} placeholder="Nombre original o instrucciones en español"
+        onChange={(event) => { setQuery(event.target.value); setPage(0); }} /></label>
+      <label>Zona corporal<select value={category} onChange={(event) => { setCategory(event.target.value); setPage(0); }}>
+        <option value="">Todas las zonas</option>{options("category").map((value) => <option key={value} value={value}>{libraryLabel(value)}</option>)}
+      </select></label>
+      <label>Equipamiento<select value={equipment} onChange={(event) => { setEquipment(event.target.value); setPage(0); }}>
+        <option value="">Todo el equipamiento</option>{options("equipment").map((value) => <option key={value} value={value}>{libraryLabel(value)}</option>)}
+      </select></label>
+      <label>Músculo objetivo<select value={target} onChange={(event) => { setTarget(event.target.value); setPage(0); }}>
+        <option value="">Todos los músculos</option>{options("target").map((value) => <option key={value} value={value}>{libraryLabel(value)}</option>)}
+      </select></label>
+      <button type="button" onClick={() => { setQuery(""); setCategory(""); setEquipment(""); setTarget(""); setPage(0); }}>Limpiar filtros</button>
+    </div>
+    <p className="library-status" role="status">{error ? "" : records ? `${filtered.length} ejercicios · Página ${page + 1} de ${pageCount}` : "Cargando biblioteca…"}</p>
+    {error && <div role="alert"><p>{error}</p><button type="button" onClick={() => setAttempt((value) => value + 1)}>Reintentar</button></div>}
+    {records && !filtered.length && <p>No hay ejercicios que coincidan con los filtros.</p>}
+    <div className="library-results">
+      {filtered.slice(page * 30, (page + 1) * 30).map((record) => <article className="library-card" key={record.id}>
+        <div><h3>{record.name}</h3><p className="library-meta">{libraryLabel(record.category)} · {libraryLabel(record.equipment)} · {libraryLabel(record.target)}</p></div>
+        <details><summary>Ver instrucciones</summary><p>{record.description || "Sin instrucciones disponibles."}</p></details>
+        <ExerciseAnimation record={record} />
+        <button type="button" onClick={() => onAdd(record)}>Añadir a la sesión</button>
+      </article>)}
+    </div>
+    {records && pageCount > 1 && <nav className="library-pagination" aria-label="Páginas de ejercicios">
+      <button type="button" disabled={page === 0} onClick={() => changePage(page - 1)}>Anterior</button>
+      <span>{page + 1} / {pageCount}</span>
+      <button type="button" disabled={page + 1 >= pageCount} onClick={() => changePage(page + 1)}>Siguiente</button>
+    </nav>}
+    <footer className="library-attribution">Nombres originales en inglés; instrucciones en español cuando están disponibles. Datos de <a href="https://github.com/hasaneyldrm/exercises-dataset" target="_blank" rel="noreferrer">Exercises Dataset</a> · <a href={libraryLicenseUrl} target="_blank" rel="noreferrer">Licencia de textos y condiciones de los medios</a>. Los GIF se cargan desde GitHub al acercarse al área visible. © Gym visual — <a href="https://gymvisual.com/" target="_blank" rel="noreferrer">https://gymvisual.com/</a>. Los medios requieren licencia propia y no están cubiertos por MIT.</footer>
+  </>;
+  return modal
+    ? <dialog ref={dialogRef} className="exercise-library library-dialog" aria-labelledby="exercise-library-title" onCancel={(event) => { event.preventDefault(); onClose(); }}>{content}</dialog>
+    : <section className="exercise-library" aria-labelledby="exercise-library-title">{content}</section>;
+}
+
 function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecution = {}, sharedEditor = false, studentUrl: providedStudentUrl = "", prescriberUrl: providedPrescriberUrl = "", sharedAt = "", prescriberToken = "", planId = "", pdfOnly = false }) {
   const [plan, setPlan] = useState(() => {
     const storedPlan = !providedPlan && !sharedEditor
@@ -564,6 +658,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
   const [pdfState, setPdfState] = useState({ loading: false, error: "" });
   const [savedServerPlan, setSavedServerPlan] = useState(serverPlan);
   const [studentExecution, setStudentExecution] = useState(initialExecution);
+  const [librarySessionId, setLibrarySessionId] = useState(null);
   const importRef = useRef(null);
   const initialPlanRef = useRef(plan);
   const savingRef = useRef(false);
@@ -918,20 +1013,27 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
       }),
     }));
   };
-  const addExerciseToSession = () => {
-    const exercise = makeExercise();
+  const addExerciseToSession = (definition = null, sessionId = day?.id) => {
+    if (!plan.weeks.some((item) => item.days.some((itemDay) => itemDay.id === sessionId))) return;
+    syncNextEntityId(plan);
+    const exercise = makeExercise(definition?.name, definition?.category === "cardio" ? "cardio" : "strength");
+    if (definition) exercise.description = definition.description || "";
     setPlan((p) => ({
       ...p,
       weeks: p.weeks.map((item) => ({
         ...item,
-        days: item.days.map((itemDay, index) =>
-          index === activeDay
+        days: item.days.map((itemDay) =>
+          itemDay.id === sessionId
             ? { ...itemDay, exercises: [...itemDay.exercises, { ...exercise }] }
             : itemDay,
         ),
       })),
     }));
-    setActiveExercise(day?.exercises.length || 0);
+    const targetIndex = week.days.findIndex((item) => item.id === sessionId);
+    setActiveDay(targetIndex);
+    setActiveExercise(week.days[targetIndex]?.exercises.length || 0);
+    setLibrarySessionId(null);
+    setTab("plan");
   };
   const removeExerciseFromSession = () => {
     if (!selectedExercise || (day?.exercises.length || 0) <= 1) return;
@@ -2127,8 +2229,11 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
                       </button>
                       </div>
                     ))}
-                    <button className="add-exercise-list" onClick={addExerciseToSession}>
+                    <button className="add-exercise-list" onClick={() => addExerciseToSession()}>
                       <Plus size={15} /> Añadir ejercicio
+                    </button>
+                    <button className="add-exercise-list" onClick={() => setLibrarySessionId(day.id)}>
+                      <Search size={15} /> Añadir desde biblioteca
                     </button>
                   </div>
                   <div className="plan-exercise-editor">
@@ -2599,6 +2704,8 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
                 ))}
               </section>
             </>
+          ) : tab === "library" ? (
+            <ExerciseLibrary sessionName={day?.name || "la sesión activa"} onAdd={(record) => addExerciseToSession(record)} />
           ) : (
             <div className="empty-state">
               <Search size={30} />
@@ -2612,6 +2719,9 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
           )}
         </div>
       </main>
+      {!pdfOnly && librarySessionId !== null && <ExerciseLibrary modal
+        sessionName={week?.days.find((item) => item.id === librarySessionId)?.name || "la sesión seleccionada"}
+        onClose={() => setLibrarySessionId(null)} onAdd={(record) => addExerciseToSession(record, librarySessionId)} />}
     </div>
   );
 }
