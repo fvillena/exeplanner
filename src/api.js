@@ -28,5 +28,11 @@ export const resetPrescriberExecution = (id, token, payload) => request(`/api/pl
 export const getAdminSession = () => request("/api/admin/session", { cache: "no-store" });
 export const loginAdmin = (username, password) => request("/api/admin/session", { method: "POST", body: JSON.stringify({ username, password }) });
 export const logoutAdmin = () => request("/api/admin/session", { method: "DELETE" });
-export const getAdminPlans = (page) => request(`/api/admin/plans?page=${page}`, { cache: "no-store" });
+export const getAdminPlans = (page, filters = {}) => {
+  const query = new URLSearchParams({ page: String(page) });
+  for (const [key, value] of Object.entries(filters)) {
+    if (value) query.set(key, value);
+  }
+  return request(`/api/admin/plans?${query}`, { cache: "no-store" });
+};
 export const deleteAdminPlan = (id) => request(`/api/admin/plans/${encodeURIComponent(id)}`, { method: "DELETE" });

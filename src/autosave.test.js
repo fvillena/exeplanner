@@ -143,6 +143,9 @@ test("admin requires a session before requesting plans and clears the password o
   }, "AdminView");
   await app.flush();
   assert.deepEqual(calls, []);
+  const header = app.find((node) => node.type === "header");
+  assert.equal(header.props.className, "topbar student-topbar");
+  assert.ok(app.find((node) => node.type === "a" && node.props.href === "/", header));
   for (const [id, value] of [["admin-username", "admin"], ["admin-password", "secret"]]) {
     app.find((node) => node.props?.id === id).props.onChange({ target: { value } });
     app.render();
@@ -252,6 +255,58 @@ test("admin deletion failure preserves the plan and shows the error", async () =
   app.render();
   assert.ok(app.find((node) => node.type === "table"));
   assert.ok(app.find((node) => node.props?.role === "alert" && node.props.children.includes("No se pudo eliminar")));
+});
+
+test("admin column filters reset pagination, combine and remain available for empty results", async () => {
+  const calls = [];
+  const app = editor({}, {
+    getAdminSession: async () => ({}),
+    getAdminPlans: async (page, filters) => {
+      calls.push({ page, ...filters });
+      return { page, total: filters.student ? 0 : 26, pages: filters.student ? 0 : 2, plans: filters.student ? [] : [{ id: "1", name: "Fuerza" }] };
+    },
+  }, "AdminView");
+  await app.flush(); await app.flush();
+  app.find((node) => node.type === "button" && node.props.children.includes("Siguiente")).props.onClick();
+  app.render(); await app.flush();
+  const input = (label) => app.find((node) => node.type === "input" && node.props["aria-label"] === label);
+  assert.equal(input("Filtrar por creación"), undefined);
+  assert.equal(input("Filtrar por última actualización"), undefined);
+  assert.ok(app.find((node) => node.type === "th" && node.props.children.includes("Creación")));
+  assert.ok(app.find((node) => node.type === "th" && node.props.children.includes("Última actualización")));
+  input("Filtrar por estudiante").props.onChange({ target: { value: "Ana" } });
+  app.render();
+  assert.ok(input("Filtrar por estudiante"));
+  await app.flush();
+  assert.equal(calls.at(-1).page, 1);
+  assert.equal(calls.at(-1).student, "Ana");
+  assert.ok(app.find((node) => node.type === "p" && node.props.children.includes("No hay planificaciones que coincidan con los filtros.")));
+  input("Filtrar por planificación").props.onChange({ target: { value: "Fuerza" } });
+  app.render(); await app.flush();
+  assert.equal(calls.at(-1).student, "Ana");
+  assert.equal(calls.at(-1).name, "Fuerza");
+  app.find((node) => node.type === "button" && node.props.children.includes("Limpiar filtros")).props.onClick();
+  app.render(); await app.flush();
+  assert.equal(input("Filtrar por estudiante").props.value, "");
+  assert.equal(calls.at(-1).name, "");
+});
+
+test("admin ignores stale results when typing a new column filter", async () => {
+  let complete;
+  const app = editor({}, {
+    getAdminSession: async () => ({}),
+    getAdminPlans: async (page, filters) => filters.student === "A" ? new Promise((resolve) => { complete = resolve; })
+      : { page, total: 0, pages: 0, plans: [] },
+  }, "AdminView");
+  await app.flush(); await app.flush();
+  const change = (value) => {
+    app.find((node) => node.props?.["aria-label"] === "Filtrar por estudiante").props.onChange({ target: { value } });
+    app.render();
+  };
+  change("A"); change("Ana"); await app.flush();
+  complete({ page: 1, total: 1, pages: 1, plans: [{ id: "old", student: "Resultado obsoleto" }] });
+  await app.flush();
+  assert.equal(app.find((node) => node.type === "td" && node.props.children.includes("Resultado obsoleto")), undefined);
 });
 
 test("does not publish an untouched plan and debounces changes", async () => {

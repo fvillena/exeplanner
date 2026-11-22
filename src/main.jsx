@@ -555,6 +555,8 @@ function AdminView() {
   const [loading, setLoading] = useState(true);
   const [attempt, setAttempt] = useState(0);
   const [deletingId, setDeletingId] = useState(null);
+  const [filters, setFilters] = useState({ name: "", student: "" });
+  const hasFilters = Object.values(filters).some(Boolean);
 
   useEffect(() => {
     let cancelled = false;
@@ -573,7 +575,7 @@ function AdminView() {
     let cancelled = false;
     setLoading(true);
     setError("");
-    getAdminPlans(page).then((data) => {
+    getAdminPlans(page, filters).then((data) => {
       if (cancelled) return;
       if (page > data.pages && page > 1) { setPage(Math.max(1, data.pages)); return; }
       setResult(data);
@@ -584,7 +586,7 @@ function AdminView() {
       if (failure.status === 401) setStatus("anonymous");
     }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [status, page, attempt]);
+  }, [status, page, attempt, filters]);
 
   async function signIn(event) {
     event.preventDefault();
@@ -629,8 +631,14 @@ function AdminView() {
     } finally { setBusy(false); setDeletingId(null); }
   }
 
+  function changeFilter(key, value) {
+    setFilters((current) => ({ ...current, [key]: value }));
+    setPage(1);
+    setLoading(true);
+  }
+
   return <div className="shared-page admin-page">
-    <header className="shared-header">
+    <header className="topbar student-topbar">
       <a className="brand topbar-brand" href="/"><div className="brand-mark"><Activity size={20} /></div><span>exe<span>planner</span></span></a>
       <span>Administración</span>
     </header>
@@ -650,12 +658,15 @@ function AdminView() {
         </form>
       ) : <>
         <div className="admin-toolbar"><span aria-live="polite">{result ? `${result.total} planificaciones` : "Planificaciones"}</span>
+          <button className="outline-btn" disabled={!hasFilters || busy} onClick={() => { setFilters({ name: "", student: "" }); setPage(1); setLoading(true); }}>Limpiar filtros</button>
           <button className="outline-btn" disabled={loading || busy} onClick={() => setAttempt((value) => value + 1)}>Actualizar</button></div>
-        {loading ? <p role="status">Cargando planificaciones...</p> : result && (result.plans.length ? <>
+        {loading && <p role="status">Cargando planificaciones...</p>}
           <div className="admin-table-wrap"><table className="admin-table">
             <caption className="sr-only">Planificaciones guardadas</caption>
-            <thead><tr><th scope="col">Planificación</th><th scope="col">Estudiante</th><th scope="col">Creación</th><th scope="col">Última actualización</th><th scope="col">Enlaces</th><th scope="col">Acciones</th></tr></thead>
-            <tbody>{result.plans.map((plan) => <tr key={plan.id}>
+            <thead><tr>{[["name", "Planificación"], ["student", "Estudiante"]].map(([key, label]) => <th scope="col" key={key}>
+              <label className="admin-column-filter">{label}<input type="search" aria-label={`Filtrar por ${label.toLowerCase()}`} placeholder="Filtrar..." maxLength={200} value={filters[key]} disabled={busy} onChange={(event) => changeFilter(key, event.target.value)} /></label>
+            </th>)}<th scope="col">Creación</th><th scope="col">Última actualización</th><th scope="col">Enlaces</th><th scope="col">Acciones</th></tr></thead>
+            <tbody>{!loading && result?.plans.map((plan) => <tr key={plan.id}>
               <td><strong>{plan.name || "Sin título"}</strong></td><td>{plan.student || "Sin especificar"}</td>
               <td>{formatSharedDate(plan.createdAt)}</td><td>{formatSharedDate(plan.updatedAt)}</td>
               <td><div className="admin-plan-links">
@@ -665,12 +676,13 @@ function AdminView() {
               <td><button className="outline-btn admin-delete" disabled={busy} onClick={() => removePlan(plan)} aria-label={`Eliminar planificación ${plan.name || "Sin título"}`}><Trash2 size={14} />{deletingId === plan.id ? "Eliminando..." : "Eliminar"}</button></td>
             </tr>)}</tbody>
           </table></div>
+        {!loading && result && (result.plans.length ? <>
           <div className="admin-pagination" aria-label="Paginación de planificaciones">
             <button className="outline-btn" disabled={page <= 1 || busy} onClick={() => setPage((value) => value - 1)}>Anterior</button>
             <span aria-live="polite">Página {result.page} de {result.pages}</span>
             <button className="outline-btn" disabled={page >= result.pages || busy} onClick={() => setPage((value) => value + 1)}>Siguiente</button>
           </div>
-        </> : <p className="empty-state">Todavía no hay planificaciones guardadas.</p>)}
+        </> : <p className="empty-state">{hasFilters ? "No hay planificaciones que coincidan con los filtros." : "Todavía no hay planificaciones guardadas."}</p>)}
       </>}
     </main>
   </div>;

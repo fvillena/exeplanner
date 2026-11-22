@@ -242,6 +242,36 @@ test("listado paginado, orden estable y proyección mínima sin datos médicos n
   assert.equal(calls.length, 4);
 });
 
+test("filtros combinados aplicados antes de paginar y contar, con texto literal", async (t) => {
+  const filters = [];
+  const expected = {
+    "prescribedPlan.name": { $regex: "Fuerza", $options: "i" },
+    "prescribedPlan.student": { $regex: "Ana\\.\\*", $options: "i" },
+    createdAt: { $gte: new Date("2026-11-22T00:00:00Z"), $lt: new Date("2026-11-23T00:00:00Z") },
+    updatedAt: { $gte: new Date("2026-11-23T00:00:00Z"), $lt: new Date("2026-11-24T00:00:00Z") },
+  };
+  const { request, login } = await setup(t, { getPlans: () => ({
+    find(filter) {
+      filters.push(filter);
+      return { sort() { return this; }, skip(value) { assert.equal(value, 25); return this; },
+        limit(value) { assert.equal(value, 25); return this; }, async toArray() { return [{ _id: "26", prescribedPlan: { student: "Ana.*" } }]; } };
+    },
+    async countDocuments(filter) { filters.push(filter); return 26; },
+  }) });
+  const headers = { cookie: cookieFrom(await login()) };
+  const response = await request("/plans?page=2&name=%20Fuerza%20&student=Ana.*&createdAt=2026-11-22&updatedAt=2026-11-23", { headers });
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.equal(data.total, 26);
+  assert.equal(data.pages, 2);
+  assert.equal(data.plans[0].student, "Ana.*");
+  assert.deepEqual(filters, [expected, expected]);
+  for (const query of ["student=a&student=b", `name=${"a".repeat(201)}`, "createdAt=2026-02-30", "updatedAt=no", "createdAt=2026-13-01", "updatedAt=2026-01-01&updatedAt=2026-01-02"]) {
+    await assertError(await request(`/plans?${query}`, { headers }), 400);
+  }
+  assert.equal(filters.length, 2);
+});
+
 test("eliminación protegida, definitiva y limitada al identificador solicitado", async (t) => {
   const id = "507f1f77bcf86cd799439011";
   const documents = new Map([[id, { execution: { private: true }, sessionDates: { private: true } }],

@@ -96,6 +96,27 @@ export function createAdminRouter({ getPlans, username, password }) {
       || !Number.isSafeInteger(page) || !Number.isSafeInteger(page * PAGE_SIZE)) {
       return res.status(400).json({ error: "Página no válida" });
     }
+    const filter = {};
+    for (const [key, field] of [["name", "prescribedPlan.name"], ["student", "prescribedPlan.student"]]) {
+      const value = req.query[key];
+      if (value === undefined) continue;
+      if (typeof value !== "string" || value.length > 200) {
+        return res.status(400).json({ error: "Filtro de texto no válido" });
+      }
+      if (value.trim()) filter[field] = { $regex: value.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
+    }
+    for (const key of ["createdAt", "updatedAt"]) {
+      const value = req.query[key];
+      if (value === undefined || value === "") continue;
+      if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return res.status(400).json({ error: "Filtro de fecha no válido" });
+      }
+      const start = new Date(`${value}T00:00:00.000Z`);
+      if (!Number.isFinite(start.getTime()) || start.toISOString().slice(0, 10) !== value) {
+        return res.status(400).json({ error: "Filtro de fecha no válido" });
+      }
+      filter[key] = { $gte: start, $lt: new Date(start.getTime() + 86_400_000) };
+    }
     try {
       const collection = getPlans();
       if (!collection) return res.status(503).json({ error: "Base de datos no disponible" });
@@ -104,9 +125,9 @@ export function createAdminRouter({ getPlans, username, password }) {
         createdAt: 1, updatedAt: 1, prescriberToken: 1, studentToken: 1,
       };
       const [documents, total] = await Promise.all([
-        collection.find({}, { projection }).sort({ updatedAt: -1, _id: -1 })
+        collection.find(filter, { projection }).sort({ updatedAt: -1, _id: -1 })
           .skip((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).toArray(),
-        collection.countDocuments({}),
+        collection.countDocuments(filter),
       ]);
       const plans = documents.map((doc) => ({
         id: String(doc._id),
