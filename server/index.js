@@ -5,6 +5,7 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { MongoClient } from "mongodb";
+import { createAdminRouter } from "./admin.js";
 
 const app = express();
 const port = Number(process.env.PORT || 3001);
@@ -13,6 +14,11 @@ const client = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 5000 });
 let plans;
 
 app.use(helmet());
+app.use("/api/admin", createAdminRouter({
+  getPlans: () => plans,
+  username: process.env.ADMIN_USERNAME,
+  password: process.env.ADMIN_PASSWORD,
+}));
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(",") || true }));
 app.use(express.json({ limit: "2mb" }));
 app.use(rateLimit({ windowMs: 60_000, limit: 120 }));

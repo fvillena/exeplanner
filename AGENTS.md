@@ -2,13 +2,16 @@
 
 ## Plataforma y archivos
 
-- Planificador de entrenamiento sin cuentas ni login. La interfaz esta en espanol.
+- Planificador de entrenamiento sin cuentas ni login para prescriptores y estudiantes. La interfaz esta en espanol.
 - Frontend React 19 + Vite. `src/main.jsx` contiene el editor, las vistas compartidas, la conversion de datos y la exportacion PDF con enlace y QR del estudiante.
 - `src/styles.css` contiene los estilos. Mantener el lenguaje visual existente y la adaptacion a movil.
 - `src/api.js` centraliza las peticiones a rutas `/api/` del mismo origen.
 - `src/exercise-library.js` carga bajo demanda el catalogo local `src/data/exercises.json`. Su revision y licencia estan en `src/data/exercises-source.json` y `src/data/exercises.LICENSE.txt`. Los GIF de Gym visual se guardan en `public/exercise-media/videos` y se sirven desde `/exercise-media/videos/`, sin peticiones a GitHub. Aparecen con carga diferida nativa (`loading="lazy"`) y atribucion. Requieren licencia propia, no estan cubiertos por MIT. No se copian a los planes ni al PDF. El Dockerfile del frontend debe copiar `public` antes de compilar.
 - Backend Express + MongoDB en `server/index.js`; configura la conexion mediante variables de entorno.
 - Rutas: `/` crea una planificacion; `/p/:token` permite editar como prescriptor; `/s/:token` permite consultar y registrar la ejecucion como estudiante.
+- `/admin` lista todas las planificaciones con enlaces de prescriptor y estudiante, en paginas de 25. Usa `ADMIN_USERNAME` y `ADMIN_PASSWORD` del backend (`.env` en Compose); sin ambos valores el acceso administrativo queda deshabilitado. Nunca usar variables `VITE_` para estas credenciales.
+- El administrador puede eliminar una planificacion con confirmacion mediante `DELETE /api/admin/plans/:id`. El borrado es definitivo e incluye ejecuciones y fechas; ambos enlaces dejan de funcionar.
+- `server/admin.js` implementa `/api/admin`: login/logout y listado autenticado mediante cookie HttpOnly, SameSite Strict y Secure en HTTPS. Las sesiones duran 8 horas, residen en memoria y se invalidan al reiniciar el backend. En produccion usar HTTPS; el proxy debe conservar Host con puerto y el protocolo publico en X-Forwarded-Proto.
 - `example.json` y `example2.json` son planes importables. `example2.json` incluye una descripcion extensa en "Sentadilla a caja" para probar el resumen expandible.
 - `TODO.md` contiene las tareas funcionales. Revisar su estado actual antes de elegir la siguiente.
 
@@ -51,6 +54,7 @@ curl.exe --fail -s http://localhost:8080/api/health
 ```
 
 - Las pruebas actuales estan en `src/autosave.test.js`: cubren guardado automatico, reordenacion, controles de arrastre/teclado y descripciones expandibles. Usan un arnes de componentes con API y DOM simulados, no un navegador real ni MongoDB.
+- `npm.cmd test` tambien ejecuta `server/admin.test.js`, con peticiones HTTP y una coleccion MongoDB simulada para autenticacion, proteccion de acceso y paginacion; el arnes frontend cubre login, listado, paginacion, logout y caducidad.
 - Tras reconstruir Docker, verificar que `/` referencia los assets de la nueva compilacion y que `/api/health` devuelve `ok: true` y `database: true`.
 - Una pestana ya abierta necesita recargarse; usar Ctrl+F5 si conserva recursos anteriores.
 - Para probar la descripcion extensa, importar el `example2.json` actualizado y abrir el enlace del estudiante. Cambiar el JSON de ejemplo no modifica planes ya guardados.

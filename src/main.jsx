@@ -7,6 +7,11 @@ import {
   updatePrescription,
   getStudentPlan,
   getPrescriberPlan,
+  getAdminSession,
+  loginAdmin,
+  logoutAdmin,
+  getAdminPlans,
+  deleteAdminPlan,
   saveExecution,
   resetExecution,
   resetPrescriberExecution,
@@ -531,11 +536,144 @@ function ReorderHandle({ kind, index, count, name, onMove }) {
 }
 
 function AppRouter() {
+  if (/^\/admin\/?$/.test(window.location.pathname)) return <AdminView />;
   const planMatch = window.location.pathname.match(/^\/p\/([^/]+)/);
   if (planMatch) return <PlanAccessView token={decodeURIComponent(planMatch[1])} />;
   const studentMatch = window.location.pathname.match(/^\/s\/([^/]+)/);
   if (studentMatch) return <SharedPlanView mode="student" token={decodeURIComponent(studentMatch[1])} />;
   return <App />;
+}
+
+function AdminView() {
+  const [status, setStatus] = useState("checking");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [page, setPage] = useState(1);
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [attempt, setAttempt] = useState(0);
+  const [deletingId, setDeletingId] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAdminSession().then(() => {
+      if (!cancelled) setStatus("authenticated");
+    }).catch((failure) => {
+      if (cancelled) return;
+      setStatus("anonymous");
+      if (failure.status !== 401) setError(failure.message);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    getAdminPlans(page).then((data) => {
+      if (cancelled) return;
+      if (page > data.pages && page > 1) { setPage(Math.max(1, data.pages)); return; }
+      setResult(data);
+    }).catch((failure) => {
+      if (cancelled) return;
+      setResult(null);
+      setError(failure.status === 401 ? "La sesión ha caducado. Inicia sesión de nuevo." : failure.message);
+      if (failure.status === 401) setStatus("anonymous");
+    }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [status, page, attempt]);
+
+  async function signIn(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await loginAdmin(username, password);
+      setPage(1);
+      setResult(null);
+      setStatus("authenticated");
+    } catch (failure) { setError(failure.message); }
+    finally { setPassword(""); setBusy(false); }
+  }
+
+  async function signOut() {
+    setBusy(true);
+    setError("");
+    try {
+      await logoutAdmin();
+      setResult(null);
+      setUsername("");
+      setStatus("anonymous");
+    } catch (failure) {
+      if (failure.status === 401) { setResult(null); setStatus("anonymous"); }
+      else setError(failure.message);
+    }
+    finally { setBusy(false); }
+  }
+
+  async function removePlan(plan) {
+    if (busy || !window.confirm(`¿Eliminar la planificación "${plan.name || "Sin título"}"${plan.student ? ` de ${plan.student}` : ""}? Se borrarán también las ejecuciones del estudiante y los enlaces dejarán de funcionar. Esta acción no se puede deshacer.`)) return;
+    setBusy(true);
+    setDeletingId(plan.id);
+    setError("");
+    try {
+      await deleteAdminPlan(plan.id);
+      setLoading(true);
+      setAttempt((value) => value + 1);
+    } catch (failure) {
+      setError(failure.status === 401 ? "La sesión ha caducado. Inicia sesión de nuevo." : failure.message);
+      if (failure.status === 401) { setResult(null); setStatus("anonymous"); }
+    } finally { setBusy(false); setDeletingId(null); }
+  }
+
+  return <div className="shared-page admin-page">
+    <header className="shared-header">
+      <a className="brand topbar-brand" href="/"><div className="brand-mark"><Activity size={20} /></div><span>exe<span>planner</span></span></a>
+      <span>Administración</span>
+    </header>
+    <main>
+      <div className="shared-heading">
+        <div><h1>{status === "authenticated" ? "Todas las planificaciones" : "Acceso de administrador"}</h1>
+          <p>{status === "authenticated" ? "Consulta los planes guardados, del más reciente al más antiguo." : "Utiliza las credenciales de administración configuradas en el servidor."}</p></div>
+        {status === "authenticated" && <button className="outline-btn" disabled={busy} onClick={signOut}>{busy && !deletingId ? "Cerrando sesión..." : "Cerrar sesión"}</button>}
+      </div>
+      {error && <p className="error-banner admin-error" role="alert">{error}</p>}
+      {status === "checking" ? <p role="status">Comprobando sesión...</p> : status === "anonymous" ? (
+        <form className="admin-login" onSubmit={signIn}>
+          <label htmlFor="admin-username">Usuario<input id="admin-username" name="username" autoComplete="username" required value={username} onChange={(event) => setUsername(event.target.value)} disabled={busy} /></label>
+          <label htmlFor="admin-password">Contraseña<input id="admin-password" name="password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} disabled={busy} /></label>
+          <button className="dark-btn" type="submit" disabled={busy}>{busy ? "Accediendo..." : "Iniciar sesión"}</button>
+          <a href="/">Volver al planificador</a>
+        </form>
+      ) : <>
+        <div className="admin-toolbar"><span aria-live="polite">{result ? `${result.total} planificaciones` : "Planificaciones"}</span>
+          <button className="outline-btn" disabled={loading || busy} onClick={() => setAttempt((value) => value + 1)}>Actualizar</button></div>
+        {loading ? <p role="status">Cargando planificaciones...</p> : result && (result.plans.length ? <>
+          <div className="admin-table-wrap"><table className="admin-table">
+            <caption className="sr-only">Planificaciones guardadas</caption>
+            <thead><tr><th scope="col">Planificación</th><th scope="col">Estudiante</th><th scope="col">Creación</th><th scope="col">Última actualización</th><th scope="col">Enlaces</th><th scope="col">Acciones</th></tr></thead>
+            <tbody>{result.plans.map((plan) => <tr key={plan.id}>
+              <td><strong>{plan.name || "Sin título"}</strong></td><td>{plan.student || "Sin especificar"}</td>
+              <td>{formatSharedDate(plan.createdAt)}</td><td>{formatSharedDate(plan.updatedAt)}</td>
+              <td><div className="admin-plan-links">
+                {plan.prescriberToken && <a href={`/p/${encodeURIComponent(plan.prescriberToken)}`} target="_blank" rel="noreferrer">Prescriptor<span className="sr-only"> (nueva pestaña)</span></a>}
+                {plan.studentToken && <a href={`/s/${encodeURIComponent(plan.studentToken)}`} target="_blank" rel="noreferrer">Estudiante<span className="sr-only"> (nueva pestaña)</span></a>}
+              </div></td>
+              <td><button className="outline-btn admin-delete" disabled={busy} onClick={() => removePlan(plan)} aria-label={`Eliminar planificación ${plan.name || "Sin título"}`}><Trash2 size={14} />{deletingId === plan.id ? "Eliminando..." : "Eliminar"}</button></td>
+            </tr>)}</tbody>
+          </table></div>
+          <div className="admin-pagination" aria-label="Paginación de planificaciones">
+            <button className="outline-btn" disabled={page <= 1 || busy} onClick={() => setPage((value) => value - 1)}>Anterior</button>
+            <span aria-live="polite">Página {result.page} de {result.pages}</span>
+            <button className="outline-btn" disabled={page >= result.pages || busy} onClick={() => setPage((value) => value + 1)}>Siguiente</button>
+          </div>
+        </> : <p className="empty-state">Todavía no hay planificaciones guardadas.</p>)}
+      </>}
+    </main>
+  </div>;
 }
 
 function ExerciseAnimation({ record }) {
@@ -1773,6 +1911,7 @@ function App({ initialPlan: providedPlan = null, serverPlan = null, initialExecu
           </button>
         </nav>
         <div className="sidebar-bottom">
+          <a className="outline-btn" href="/admin">Administración</a>
           <button>
             <Settings2 size={18} /> Preferencias
           </button>

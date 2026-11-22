@@ -9,7 +9,11 @@ const request = async (path, options = {}) => {
     },
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "No se pudo conectar con la API");
+  if (!response.ok) {
+    const error = new Error(data.error || "No se pudo conectar con la API");
+    error.status = response.status;
+    throw error;
+  }
   return data;
 };
 export const publishPlan = (plan) => request("/api/plans", { method: "POST", body: JSON.stringify(plan) });
@@ -21,3 +25,8 @@ export const saveExecution = (token, payload) => request(`/api/student/plans/${e
 export const saveSessionDate = (token, payload) => request(`/api/student/plans/${encodeURIComponent(token)}/session-date`, { method: "PATCH", body: JSON.stringify(payload) });
 export const resetExecution = (token, payload) => request(`/api/student/plans/${encodeURIComponent(token)}/execution/reset`, { method: "POST", body: JSON.stringify(payload) });
 export const resetPrescriberExecution = (id, token, payload) => request(`/api/plans/${id}/execution/reset`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(payload) });
+export const getAdminSession = () => request("/api/admin/session", { cache: "no-store" });
+export const loginAdmin = (username, password) => request("/api/admin/session", { method: "POST", body: JSON.stringify({ username, password }) });
+export const logoutAdmin = () => request("/api/admin/session", { method: "DELETE" });
+export const getAdminPlans = (page) => request(`/api/admin/plans?page=${page}`, { cache: "no-store" });
+export const deleteAdminPlan = (id) => request(`/api/admin/plans/${encodeURIComponent(id)}`, { method: "DELETE" });

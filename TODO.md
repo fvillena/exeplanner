@@ -2,3 +2,4 @@
 - [x] Permitir reordenar las sesiones y los ejercicios dentro de las sesiones.
 - [x] En la vista de estudiante cuando la descripción del ejercicio es muy larga, mostrar un resumen y permitir expandir para ver la descripción completa.
 - [x] Implementar la biblioteca de ejercicios https://github.com/hasaneyldrm/exercises-dataset
+- [x] Página de administrador donde puedo ver todas las planificaciones, el usuario y contraseña de administrador se colocan como variables de entorno en el archivo .env (`ADMIN_USERNAME` y `ADMIN_PASSWORD`).

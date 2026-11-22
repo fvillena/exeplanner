@@ -11,7 +11,7 @@ const bundle = await rolldown({
   input: entry,
   external: (id) => id !== entry,
   transform: { jsx: { runtime: "classic" } },
-   plugins: [{ name: "test-app", transform: (code) => `${code}\nexport { App as TestApp, ReorderHandle, StudentExerciseDescription, ExerciseLibrary, ExerciseAnimation };` }],
+   plugins: [{ name: "test-app", transform: (code) => `${code}\nexport { App as TestApp, ReorderHandle, StudentExerciseDescription, ExerciseLibrary, ExerciseAnimation, AdminView };` }],
 });
 const { output } = await bundle.generate({ format: "cjs" });
 const compiled = output[0].code;
@@ -56,6 +56,11 @@ function editor(props = {}, api = {}, component = "TestApp") {
      jspdf: {}, qrcode: {}, "lucide-react": {}, "./styles.css": {},
      "./exercise-library.js": { ...exerciseLibrary, loadExerciseLibrary: api.loadExerciseLibrary || exerciseLibrary.loadExerciseLibrary },
     "./api": {
+      getAdminSession: api.getAdminSession,
+      loginAdmin: api.loginAdmin,
+      logoutAdmin: api.logoutAdmin,
+      getAdminPlans: api.getAdminPlans,
+      deleteAdminPlan: api.deleteAdminPlan,
       publishPlan: async (plan) => {
         requests.push({ method: "POST", plan });
         return api.publishPlan ? api.publishPlan(plan) : credentials;
@@ -72,6 +77,7 @@ function editor(props = {}, api = {}, component = "TestApp") {
     localStorage: storage, sessionStorage: storage,
     document: { getElementById: () => ({}), elementFromPoint: () => api.dropTarget },
     window: {
+      confirm: api.confirm || (() => false),
       location: { pathname: "/", origin: "https://example.com", search: "" },
       history: { replaceState: (...args) => urls.push(args[2]) },
       innerHeight: 900, scrollBy() {},
@@ -127,6 +133,126 @@ function editor(props = {}, api = {}, component = "TestApp") {
     },
   };
 }
+
+test("admin requires a session before requesting plans and clears the password on failed login", async () => {
+  const calls = [];
+  const app = editor({}, {
+    getAdminSession: async () => { throw Object.assign(new Error("No autorizado"), { status: 401 }); },
+    getAdminPlans: async () => { calls.push("plans"); },
+    loginAdmin: async (username, password) => { calls.push({ username, password }); throw new Error("Credenciales incorrectas"); },
+  }, "AdminView");
+  await app.flush();
+  assert.deepEqual(calls, []);
+  for (const [id, value] of [["admin-username", "admin"], ["admin-password", "secret"]]) {
+    app.find((node) => node.props?.id === id).props.onChange({ target: { value } });
+    app.render();
+  }
+  await app.find((node) => node.type === "form").props.onSubmit({ preventDefault() {} });
+  app.render();
+  assert.deepEqual(calls, [{ username: "admin", password: "secret" }]);
+  assert.equal(app.find((node) => node.props?.id === "admin-password").props.value, "");
+  assert.ok(app.find((node) => node.props?.role === "alert"));
+});
+
+test("admin lists paginated plans with safe links and removes them on logout", async () => {
+  const pages = [];
+  let loggedOut = false;
+  const app = editor({}, {
+    getAdminSession: async () => ({ ok: true }),
+    getAdminPlans: async (page) => {
+      pages.push(page);
+      return { page, pages: 2, total: 26, plans: [{ id: "1", name: "Fuerza", student: "Ana", prescriberToken: "coach/token", studentToken: "student" }] };
+    },
+    logoutAdmin: async () => { loggedOut = true; },
+  }, "AdminView");
+  await app.flush();
+  await app.flush();
+  const link = app.find((node) => node.type === "a" && node.props.href === "/p/coach%2Ftoken");
+  assert.equal(link.props.rel, "noreferrer");
+  assert.ok(app.find((node) => node.type === "td" && node.props.children.includes("Ana")));
+  app.find((node) => node.type === "button" && node.props.children.includes("Siguiente")).props.onClick();
+  app.render();
+  await app.flush();
+  assert.deepEqual(pages, [1, 2]);
+  await app.find((node) => node.type === "button" && node.props.children.includes("Cerrar sesión")).props.onClick();
+  app.render();
+  assert.equal(loggedOut, true);
+  assert.equal(app.find((node) => node.type === "table"), undefined);
+  assert.ok(app.find((node) => node.type === "form"));
+});
+
+test("admin successful login loads plans and empty results remain usable", async () => {
+  let requested = false;
+  const app = editor({}, {
+    getAdminSession: async () => { throw Object.assign(new Error("No autorizado"), { status: 401 }); },
+    loginAdmin: async () => ({ authenticated: true }),
+    getAdminPlans: async () => { requested = true; return { page: 1, pages: 0, total: 0, plans: [] }; },
+  }, "AdminView");
+  await app.flush();
+  await app.find((node) => node.type === "form").props.onSubmit({ preventDefault() {} });
+  app.render();
+  await app.flush();
+  assert.equal(requested, true);
+  assert.ok(app.find((node) => node.type === "p" && node.props.children.includes("Todavía no hay planificaciones guardadas.")));
+  assert.ok(app.find((node) => node.type === "button" && node.props.children.includes("Actualizar")));
+});
+
+test("admin returns to login if the session expires while paging", async () => {
+  const app = editor({}, {
+    getAdminSession: async () => ({ ok: true }),
+    getAdminPlans: async () => { throw Object.assign(new Error("No autorizado"), { status: 401 }); },
+  }, "AdminView");
+  await app.flush();
+  await app.flush();
+  assert.ok(app.find((node) => node.type === "form"));
+  assert.equal(app.find((node) => node.type === "table"), undefined);
+  assert.ok(app.find((node) => node.props?.role === "alert"));
+});
+
+test("admin deletion requires confirmation and returns to previous page after removing its last plan", async () => {
+  let confirmed = false;
+  let removed = false;
+  const pages = [];
+  const app = editor({}, {
+    getAdminSession: async () => ({}),
+    confirm: (message) => { assert.match(message, /no se puede deshacer/); return confirmed; },
+    deleteAdminPlan: async (id) => { assert.equal(id, "plan-1"); removed = true; },
+    getAdminPlans: async (page) => {
+      pages.push(page);
+      return { page, total: removed ? 25 : 26, pages: removed ? 1 : 2,
+        plans: removed && page === 2 ? [] : [{ id: "plan-1", name: "Fuerza" }] };
+    },
+  }, "AdminView");
+  await app.flush();
+  await app.flush();
+  const remove = () => app.find((node) => node.props?.["aria-label"] === "Eliminar planificación Fuerza");
+  await remove().props.onClick();
+  assert.equal(removed, false);
+  app.find((node) => node.type === "button" && node.props.children.includes("Siguiente")).props.onClick();
+  app.render();
+  await app.flush();
+  confirmed = true;
+  await remove().props.onClick();
+  app.render();
+  await app.flush();
+  await app.flush();
+  assert.equal(removed, true);
+  assert.deepEqual(pages, [1, 2, 2, 1]);
+});
+
+test("admin deletion failure preserves the plan and shows the error", async () => {
+  const app = editor({}, {
+    getAdminSession: async () => ({}), confirm: () => true,
+    getAdminPlans: async () => ({ page: 1, total: 1, pages: 1, plans: [{ id: "1", name: "Fuerza" }] }),
+    deleteAdminPlan: async () => { throw new Error("No se pudo eliminar"); },
+  }, "AdminView");
+  await app.flush();
+  await app.flush();
+  await app.find((node) => node.props?.["aria-label"] === "Eliminar planificación Fuerza").props.onClick();
+  app.render();
+  assert.ok(app.find((node) => node.type === "table"));
+  assert.ok(app.find((node) => node.props?.role === "alert" && node.props.children.includes("No se pudo eliminar")));
+});
 
 test("does not publish an untouched plan and debounces changes", async () => {
   const app = editor();
